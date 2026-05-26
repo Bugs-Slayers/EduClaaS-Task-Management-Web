@@ -91,6 +91,10 @@ export function OrganizationsPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => navigate(`/organizations/${org.id}`)}>
+                        <Building2 className="mr-2 h-4 w-4" />
+                        View Details
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => { setSelected(org); setInviteOpen(true) }}>
                         <UserPlus className="mr-2 h-4 w-4" />
                         Invite member
