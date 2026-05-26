@@ -14,17 +14,30 @@ function StatCard({ icon: Icon, label, value }: {
   icon: React.ElementType; label: string; value: number | string
 }) {
   return (
-    <Card>
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">{label}</p>
-            <p className="mt-2 text-3xl font-bold">{value}</p>
-          </div>
-          <Icon className="h-8 w-8 text-muted-foreground" />
+    <div 
+      className="p-6 rounded-xl border transition-all hover:scale-105"
+      style={{
+        background: 'var(--bg-secondary)',
+        borderColor: 'var(--border-medium)',
+      }}
+    >
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-tertiary)' }}>
+            {label}
+          </p>
+          <p className="mt-4 text-4xl font-bold" style={{ color: 'var(--text-primary)' }}>
+            {value}
+          </p>
         </div>
-      </CardContent>
-    </Card>
+        <div 
+          className="p-3 rounded-lg ml-3"
+          style={{ background: 'var(--bg-tertiary)' }}
+        >
+          <Icon className="h-6 w-6" style={{ color: 'var(--accent-electric)' }} />
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -41,17 +54,26 @@ export function DashboardPage() {
   const recentProjects = projects?.slice(0, 6) ?? []
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold">Welcome back, {user?.name?.split(' ')[0]}</h1>
-        <p className="text-sm text-muted-foreground mt-1">Here&apos;s an overview of your work</p>
+      <div className="pb-8" style={{ borderBottom: '2px solid var(--border-medium)' }}>
+        <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: 'var(--accent-electric)' }}>
+          Welcome Back
+        </p>
+        <h1 className="text-5xl font-black" style={{ color: 'var(--text-primary)' }}>
+          Dashboard
+        </h1>
+        <p className="mt-3 text-lg" style={{ color: 'var(--text-secondary)' }}>
+          Overview of your organizations, projects, and tasks
+        </p>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         {orgsLoading ? (
-          Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24" />)
+          Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-32 rounded-xl" style={{ background: 'var(--bg-secondary)' }} />
+          ))
         ) : (
           <>
             <StatCard
@@ -66,7 +88,7 @@ export function DashboardPage() {
             />
             <StatCard
               icon={CheckSquare}
-              label="Completed"
+              label="Completed Tasks"
               value={doneTasks}
             />
             <StatCard
@@ -80,130 +102,147 @@ export function DashboardPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Recent Tasks */}
-        <Card>
-          <CardHeader className="flex items-center justify-between flex-row pb-3">
-            <CardTitle className="text-base">Recent Tasks</CardTitle>
+        <div 
+          className="p-6 rounded-xl border"
+          style={{
+            background: 'var(--bg-secondary)',
+            borderColor: 'var(--border-medium)',
+          }}
+        >
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>Recent Tasks</h3>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => navigate('/tasks')}
-              className="text-xs"
+              className="text-xs h-8"
             >
               View All
               <ArrowRight className="ml-2 h-3 w-3" />
             </Button>
-          </CardHeader>
-          <CardContent>
-            {tasksLoading ? (
-              <div className="space-y-2">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} className="h-10" />
-                ))}
-              </div>
-            ) : recentTasks.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No tasks yet</p>
-            ) : (
-              <div className="space-y-2">
-                {recentTasks.map((task) => (
-                  <button
-                    key={task.id}
-                    onClick={() => navigate(`/tasks/${task.id}`)}
-                    className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-muted transition-colors text-left"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{task.title}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(new Date(task.created_at), { addSuffix: true })}
-                      </p>
-                    </div>
-                    <div className="ml-2 flex gap-1">
-                      <StatusBadge type="priority" value={task.priority} />
-                      <StatusBadge type="taskStatus" value={task.status} />
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          </div>
+          {tasksLoading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="h-12 rounded" style={{ background: 'var(--bg-tertiary)' }} />
+              ))}
+            </div>
+          ) : recentTasks.length === 0 ? (
+            <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>No tasks yet</p>
+          ) : (
+            <div className="space-y-2">
+              {recentTasks.map((task) => (
+                <button
+                  key={task.id}
+                  onClick={() => navigate('/tasks')}
+                  className="w-full flex items-center justify-between p-3 rounded-lg transition-colors text-left"
+                  style={{ background: 'var(--bg-tertiary)' }}
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{task.title}</p>
+                    <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
+                      {formatDistanceToNow(new Date(task.created_at), { addSuffix: true })}
+                    </p>
+                  </div>
+                  <div className="ml-3 flex gap-2 shrink-0">
+                    <StatusBadge type="priority" value={task.priority} />
+                    <StatusBadge type="taskStatus" value={task.status} />
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Recent Projects */}
-        <Card>
-          <CardHeader className="flex items-center justify-between flex-row pb-3">
-            <CardTitle className="text-base">Recent Projects</CardTitle>
+        <div 
+          className="p-6 rounded-xl border"
+          style={{
+            background: 'var(--bg-secondary)',
+            borderColor: 'var(--border-medium)',
+          }}
+        >
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>Recent Projects</h3>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => navigate('/projects')}
-              className="text-xs"
+              className="text-xs h-8"
             >
               View All
               <ArrowRight className="ml-2 h-3 w-3" />
             </Button>
-          </CardHeader>
-          <CardContent>
-            {projectsLoading ? (
-              <div className="space-y-2">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} className="h-10" />
-                ))}
-              </div>
-            ) : recentProjects.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No projects yet</p>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {recentProjects.map((project) => (
-                  <button
-                    key={project.id}
-                    onClick={() => navigate(`/projects/${project.id}`)}
-                    className="flex flex-col p-3 border rounded-lg hover:bg-muted transition-colors text-left text-sm"
-                  >
-                    <p className="font-medium truncate">{project.name}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {project.members.length} members
+          </div>
+          {projectsLoading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="h-12 rounded" style={{ background: 'var(--bg-tertiary)' }} />
+              ))}
+            </div>
+          ) : recentProjects.length === 0 ? (
+            <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>No projects yet</p>
+          ) : (
+            <div className="space-y-2">
+              {recentProjects.map((project) => (
+                <button
+                  key={project.id}
+                  onClick={() => navigate('/projects')}
+                  className="w-full flex items-center justify-between p-3 rounded-lg transition-colors text-left text-sm"
+                  style={{ background: 'var(--bg-tertiary)' }}
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium truncate" style={{ color: 'var(--text-primary)' }}>{project.name}</p>
+                    <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
+                      {project.members.length} {project.members.length === 1 ? 'member' : 'members'}
                     </p>
-                  </button>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => navigate('/organizations')}
-            >
-              <Building2 className="mr-2 h-4 w-4" />
-              New Org
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => navigate('/projects')}
-            >
-              <FolderKanban className="mr-2 h-4 w-4" />
-              New Project
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => navigate('/tasks')}
-            >
-              <CheckSquare className="mr-2 h-4 w-4" />
-              New Task
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <div 
+        className="p-6 rounded-xl border"
+        style={{
+          background: 'var(--bg-secondary)',
+          borderColor: 'var(--border-medium)',
+        }}
+      >
+        <h3 className="font-semibold mb-5" style={{ color: 'var(--text-primary)' }}>Quick Actions</h3>
+        <div className="flex flex-wrap gap-3">
+          <Button
+            size="lg"
+            onClick={() => navigate('/organizations')}
+            style={{ background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: `1px solid var(--border-medium)` }}
+            className="hover:border-current"
+          >
+            <Building2 className="mr-2 h-4 w-4" />
+            New Organization
+          </Button>
+          <Button
+            size="lg"
+            onClick={() => navigate('/projects')}
+            style={{ background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: `1px solid var(--border-medium)` }}
+            className="hover:border-current"
+          >
+            <FolderKanban className="mr-2 h-4 w-4" />
+            New Project
+          </Button>
+          <Button
+            size="lg"
+            onClick={() => navigate('/tasks')}
+            style={{ background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: `1px solid var(--border-medium)` }}
+            className="hover:border-current"
+          >
+            <CheckSquare className="mr-2 h-4 w-4" />
+            New Task
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }

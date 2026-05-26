@@ -27,8 +27,9 @@ export function TasksPage() {
   const projectId = params.get('project_id') ?? params.get('project') ?? undefined
   const { data: tasks, isLoading } = useTasks(projectId)
   const { mutate: create, isPending: creating } = useCreateTask()
-  const { mutate: update, isPending: updating } = useUpdateTask('')
   const { mutate: deleteTask, isPending: deleting } = useDeleteTask()
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
+  const { mutate: update, isPending: updating } = useUpdateTask(selectedTaskId || '')
 
   const [createOpen, setCreateOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
@@ -47,7 +48,8 @@ export function TasksPage() {
 
   const handleEdit = (data: any) => {
     if (!selected) return
-    update({ id: selected.id, data }, { onSuccess: () => setEditOpen(false) })
+    setSelectedTaskId(selected.id)
+    update(data, { onSuccess: () => setEditOpen(false) })
   }
 
   const handleDelete = () => {
@@ -69,7 +71,8 @@ export function TasksPage() {
       setDraggedTask(null)
       return
     }
-    update({ id: draggedTask.id, data: { status } })
+    setSelectedTaskId(draggedTask.id)
+    update({ status })
     setDraggedTask(null)
   }
 
@@ -198,15 +201,15 @@ export function TasksPage() {
                         </div>
 
                         {/* Tags */}
-                        {task.tags.length > 0 && (
+                        {(task.tags?.length ?? 0) > 0 && (
                           <div className="flex flex-wrap gap-1">
-                            {task.tags.slice(0, 2).map((tag) => (
+                            {(task.tags || []).slice(0, 2).map((tag) => (
                               <span key={tag} className="text-xs rounded px-2 py-1" style={{ background: 'var(--bg-primary)', color: 'var(--text-secondary)' }}>
                                 {tag}
                               </span>
                             ))}
-                            {task.tags.length > 2 && (
-                              <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>+{task.tags.length - 2}</span>
+                            {(task.tags?.length ?? 0) > 2 && (
+                              <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>+{(task.tags?.length ?? 0) - 2}</span>
                             )}
                           </div>
                         )}
