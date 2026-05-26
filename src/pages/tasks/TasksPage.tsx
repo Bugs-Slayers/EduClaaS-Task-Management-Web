@@ -1,10 +1,9 @@
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Plus, CheckSquare, MoreVertical, Pencil, Trash2, Filter } from 'lucide-react'
+import { Plus, CheckSquare, MoreVertical, Pencil, Trash2, GripVertical } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -14,6 +13,14 @@ import { useTasks, useCreateTask, useUpdateTask, useDeleteTask } from '@/hooks/u
 import { TaskFormDialog } from './TaskFormDialog'
 import type { Task, TaskStatus } from '@/types'
 import { formatDistanceToNow } from 'date-fns'
+
+const TASK_STATUSES: { id: TaskStatus; label: string }[] = [
+  { id: 'todo', label: 'To Do' },
+  { id: 'in_progress', label: 'In Progress' },
+  { id: 'in_review', label: 'In Review' },
+  { id: 'done', label: 'Done' },
+  { id: 'blocked', label: 'Blocked' },
+]
 
 export function TasksPage() {
   const [params] = useSearchParams()
@@ -27,9 +34,12 @@ export function TasksPage() {
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [selected, setSelected] = useState<Task | null>(null)
-  const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all')
+  const [draggedTask, setDraggedTask] = useState<Task | null>(null)
 
-  const filteredTasks = tasks?.filter((t) => statusFilter === 'all' || t.status === statusFilter) ?? []
+  const tasksByStatus = TASK_STATUSES.reduce((acc, status) => {
+    acc[status.id] = tasks?.filter((t) => t.status === status.id) ?? []
+    return acc
+  }, {} as Record<TaskStatus, Task[]>)
 
   const handleCreate = (data: any) => {
     create(data, { onSuccess: () => setCreateOpen(false) })
@@ -45,15 +55,29 @@ export function TasksPage() {
     deleteTask(selected.id, { onSuccess: () => setDeleteOpen(false) })
   }
 
-  const handleQuickStatusChange = (task: Task, newStatus: TaskStatus) => {
-    update({ id: task.id, data: { status: newStatus } })
+  const handleDragStart = (task: Task) => {
+    setDraggedTask(task)
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+  }
+
+  const handleDrop = (status: TaskStatus) => {
+    if (!draggedTask) return
+    if (draggedTask.status === status) {
+      setDraggedTask(null)
+      return
+    }
+    update({ id: draggedTask.id, data: { status } })
+    setDraggedTask(null)
   }
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Tasks"
-        description="Manage and track your tasks"
+        title="Kanban Board"
+        description="Drag and drop tasks to organize your work"
         action={
           <Button onClick={() => setCreateOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
@@ -62,102 +86,126 @@ export function TasksPage() {
         }
       />
 
-      <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as TaskStatus | 'all')}>
-        <TabsList>
-          <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="todo">To Do</TabsTrigger>
-          <TabsTrigger value="in_progress">In Progress</TabsTrigger>
-          <TabsTrigger value="in_review">In Review</TabsTrigger>
-          <TabsTrigger value="done">Done</TabsTrigger>
-          <TabsTrigger value="blocked">Blocked</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value={statusFilter} className="mt-6">
-          {isLoading ? (
-            <div className="space-y-3">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-20 rounded-lg" />
+      {isLoading ? (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="space-y-3">
+              <Skeleton className="h-10 rounded" />
+              {Array.from({ length: 3 }).map((_, j) => (
+                <Skeleton key={j} className="h-32 rounded-lg" />
               ))}
             </div>
-          ) : filteredTasks.length === 0 ? (
-            <EmptyState
-              icon={CheckSquare}
-              title="No tasks found"
-              description={statusFilter === 'all' ? 'Create your first task to get started.' : `No tasks with status "${statusFilter}".`}
-              action={statusFilter === 'all' ? { label: 'Create Task', onClick: () => setCreateOpen(true) } : undefined}
-            />
-          ) : (
-            <div className="space-y-3">
-              {filteredTasks.map((task) => (
-                <Card key={task.id} className="group hover:shadow-md transition-shadow">
-                  <CardContent className="flex items-center gap-4 p-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <h3 className="font-medium truncate">{task.title}</h3>
-                          {task.description && (
-                            <p className="mt-1 text-sm text-muted-foreground line-clamp-1">{task.description}</p>
-                          )}
-                          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                            <span>{formatDistanceToNow(new Date(task.created_at), { addSuffix: true })}</span>
-                            {task.tags.length > 0 && (
-                              <>
-                                <span>•</span>
-                                <div className="flex gap-1">
-                                  {task.tags.slice(0, 3).map((tag) => (
-                                    <span key={tag} className="rounded bg-muted px-1.5 py-0.5">{tag}</span>
-                                  ))}
-                                </div>
-                              </>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-5 overflow-x-auto">
+          {TASK_STATUSES.map((status) => (
+            <div
+              key={status.id}
+              onDragOver={handleDragOver}
+              onDrop={() => handleDrop(status.id)}
+              className="flex flex-col gap-3 min-h-96 p-4 rounded-lg bg-muted/30 border border-dashed transition-colors"
+            >
+              {/* Column Header */}
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-sm">{status.label}</h3>
+                <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded">
+                  {tasksByStatus[status.id].length}
+                </span>
+              </div>
+
+              {/* Tasks */}
+              <div className="flex flex-col gap-2 flex-1">
+                {tasksByStatus[status.id].length === 0 ? (
+                  <div className="flex-1 flex items-center justify-center text-center">
+                    <p className="text-xs text-muted-foreground">No tasks</p>
+                  </div>
+                ) : (
+                  tasksByStatus[status.id].map((task) => (
+                    <Card
+                      key={task.id}
+                      draggable
+                      onDragStart={() => handleDragStart(task)}
+                      onDragEnd={() => setDraggedTask(null)}
+                      className={`group cursor-grab active:cursor-grabbing p-3 transition-all hover:shadow-md border-l-4 ${
+                        draggedTask?.id === task.id ? 'opacity-50' : ''
+                      }`}
+                      style={{
+                        borderLeftColor:
+                          task.priority === 'critical'
+                            ? '#ef4444'
+                            : task.priority === 'high'
+                              ? '#f97316'
+                              : task.priority === 'medium'
+                                ? '#eab308'
+                                : '#84cc16',
+                      }}
+                    >
+                      <CardContent className="p-0 space-y-2">
+                        <div className="flex items-start gap-2">
+                          <GripVertical className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100" />
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-medium truncate">{task.title}</h4>
+                            {task.description && (
+                              <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{task.description}</p>
                             )}
                           </div>
-                        </div>
-                        <div className="flex shrink-0 items-center gap-2">
-                          <StatusBadge type="priority" value={task.priority} />
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon-sm">
-                                <StatusBadge type="taskStatus" value={task.status} className="cursor-pointer" />
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                className="h-6 w-6 opacity-0 group-hover:opacity-100"
+                              >
+                                <MoreVertical className="h-3 w-3" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleQuickStatusChange(task, 'todo')}>To Do</DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleQuickStatusChange(task, 'in_progress')}>In Progress</DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleQuickStatusChange(task, 'in_review')}>In Review</DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleQuickStatusChange(task, 'done')}>Done</DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleQuickStatusChange(task, 'blocked')}>Blocked</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon-sm" className="opacity-0 group-hover:opacity-100">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
+                            <DropdownMenuContent align="end" className="w-40">
                               <DropdownMenuItem onClick={() => { setSelected(task); setEditOpen(true) }}>
-                                <Pencil className="mr-2 h-4 w-4" />
+                                <Pencil className="mr-2 h-3 w-3" />
                                 Edit
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => { setSelected(task); setDeleteOpen(true) }}
                                 className="text-destructive focus:text-destructive"
                               >
-                                <Trash2 className="mr-2 h-4 w-4" />
+                                <Trash2 className="mr-2 h-3 w-3" />
                                 Delete
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+
+                        {/* Task Meta */}
+                        <div className="flex items-center justify-between gap-2 text-xs">
+                          <span className="text-muted-foreground">
+                            {formatDistanceToNow(new Date(task.created_at), { addSuffix: true })}
+                          </span>
+                          <StatusBadge type="priority" value={task.priority} />
+                        </div>
+
+                        {/* Tags */}
+                        {task.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {task.tags.slice(0, 2).map((tag) => (
+                              <span key={tag} className="text-xs rounded bg-muted px-2 py-1">
+                                {tag}
+                              </span>
+                            ))}
+                            {task.tags.length > 2 && (
+                              <span className="text-xs text-muted-foreground">+{task.tags.length - 2}</span>
+                            )}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </div>
             </div>
-          )}
-        </TabsContent>
-      </Tabs>
+          ))}
+        </div>
+      )}
 
       <TaskFormDialog
         open={createOpen}
