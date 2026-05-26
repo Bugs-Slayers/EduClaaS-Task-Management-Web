@@ -14,7 +14,7 @@ import { formatDistanceToNow } from 'date-fns'
 
 export function TasksPage() {
   const [params] = useSearchParams()
-  const projectId = params.get('project') ?? undefined
+  const projectId = params.get('project_id') ?? params.get('project') ?? undefined
   const { data: tasks, isLoading } = useTasks(projectId)
   const { mutate: create, isPending: creating } = useCreateTask()
   const { mutate: update, isPending: updating } = useUpdateTask('')
