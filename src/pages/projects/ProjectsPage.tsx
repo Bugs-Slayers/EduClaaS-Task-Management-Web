@@ -43,90 +43,123 @@ export function ProjectsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Projects"
-        description="Manage your projects and track progress"
-        action={
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="pb-8" style={{ borderBottom: '2px solid var(--border-medium)' }}>
+        <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: 'var(--accent-electric)' }}>
+          Project Management
+        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-5xl font-black" style={{ color: 'var(--text-primary)' }}>
+              Projects
+            </h1>
+            <p className="mt-3 text-lg" style={{ color: 'var(--text-secondary)' }}>
+              Organize and track your project work
+            </p>
+          </div>
+          <Button 
+            onClick={() => setCreateOpen(true)}
+            className="px-6 h-11"
+            style={{ background: 'var(--accent-electric)', color: 'var(--text-inverse)' }}
+          >
+            <Plus className="mr-2 h-5 w-5" />
             New Project
           </Button>
-        }
-      />
+        </div>
+      </div>
 
       {isLoading ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-44 rounded-xl" />
+            <div key={i} className="h-48 rounded-xl" style={{ background: 'var(--bg-secondary)' }} />
           ))}
         </div>
       ) : !projects || projects.length === 0 ? (
-        <EmptyState
-          icon={FolderKanban}
-          title="No projects yet"
-          description="Create your first project to organize your tasks."
-          action={{ label: 'Create Project', onClick: () => setCreateOpen(true) }}
-        />
+        <div className="flex flex-col items-center justify-center py-16 px-4 rounded-xl" style={{ background: 'var(--bg-secondary)' }}>
+          <FolderKanban className="h-12 w-12 mb-4" style={{ color: 'var(--text-tertiary)' }} />
+          <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>No projects yet</h3>
+          <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>Create your first project to organize your tasks.</p>
+          <Button 
+            onClick={() => setCreateOpen(true)}
+            style={{ background: 'var(--accent-electric)', color: 'var(--text-inverse)' }}
+          >
+            Create Project
+          </Button>
+        </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {projects.map((proj) => (
-            <Card key={proj.id} className="group relative hover:shadow-md transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
-                      <FolderKanban className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <div className="min-w-0">
-                      <CardTitle className="truncate text-base">{proj.name}</CardTitle>
-                      <CardDescription className="text-xs">
-                        {proj.members.length} {proj.members.length === 1 ? 'member' : 'members'}
-                      </CardDescription>
-                    </div>
+            <div 
+              key={proj.id} 
+              className="group p-6 rounded-xl border transition-all hover:border-current"
+              style={{
+                background: 'var(--bg-secondary)',
+                borderColor: 'var(--border-medium)',
+              }}
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3 flex-1">
+                  <div 
+                    className="flex h-12 w-12 items-center justify-center rounded-lg flex-shrink-0"
+                    style={{ background: 'var(--bg-tertiary)' }}
+                  >
+                    <FolderKanban className="h-6 w-6" style={{ color: 'var(--accent-cyber)' }} />
                   </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon-sm" className="opacity-0 group-hover:opacity-100">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => navigate(`/projects/${proj.id}`)}>
-                        <Eye className="mr-2 h-4 w-4" />
-                        View Details
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => navigate(`/tasks?project_id=${proj.id}`)}>
-                        <CheckSquare className="mr-2 h-4 w-4" />
-                        View Tasks
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => { setSelected(proj); setEditOpen(true) }}>
-                        <Pencil className="mr-2 h-4 w-4" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => { setSelected(proj); setDeleteOpen(true) }}
-                        className="text-destructive focus:text-destructive"
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+                      {proj.name}
+                    </h3>
+                    <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
+                      {proj.members.length} {proj.members.length === 1 ? 'member' : 'members'}
+                    </p>
+                  </div>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <p className="mb-3 line-clamp-2 text-sm text-muted-foreground">
-                  {proj.description || 'No description'}
-                </p>
-                <div className="flex items-center justify-between">
-                  <StatusBadge type="projectStatus" value={proj.status} />
-                  <span className="text-xs text-muted-foreground">
-                    {formatDistanceToNow(new Date(proj.created_at), { addSuffix: true })}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="icon-sm" 
+                      className="opacity-0 group-hover:opacity-100 h-8 w-8"
+                    >
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => navigate(`/projects/${proj.id}`)}>
+                      <Eye className="mr-2 h-4 w-4" />
+                      View Details
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate(`/tasks?project_id=${proj.id}`)}>
+                      <CheckSquare className="mr-2 h-4 w-4" />
+                      View Tasks
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => { setSelected(proj); setEditOpen(true) }}>
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => { setSelected(proj); setDeleteOpen(true) }}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
+              <p className="mb-4 line-clamp-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                {proj.description || 'No description provided'}
+              </p>
+
+              <div className="flex items-center justify-between pt-4" style={{ borderTop: '1px solid var(--border-medium)' }}>
+                <StatusBadge type="projectStatus" value={proj.status} />
+                <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                  {formatDistanceToNow(new Date(proj.created_at), { addSuffix: true })}
+                </span>
+              </div>
+            </div>
           ))}
         </div>
       )}
