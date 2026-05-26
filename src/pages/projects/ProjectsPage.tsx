@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Plus, FolderKanban, MoreVertical, Pencil, Trash2, Eye } from 'lucide-react'
+import { Plus, FolderKanban, MoreVertical, Pencil, Trash2, Eye, CheckSquare } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -92,9 +92,13 @@ export function ProjectsPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => navigate(`/tasks?project=${proj.id}`)}>
+                      <DropdownMenuItem onClick={() => navigate(`/projects/${proj.id}`)}>
                         <Eye className="mr-2 h-4 w-4" />
-                        View tasks
+                        View Details
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate(`/tasks?project_id=${proj.id}`)}>
+                        <CheckSquare className="mr-2 h-4 w-4" />
+                        View Tasks
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => { setSelected(proj); setEditOpen(true) }}>
                         <Pencil className="mr-2 h-4 w-4" />

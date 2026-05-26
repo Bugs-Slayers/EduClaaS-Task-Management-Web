@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, Building2, FolderKanban,
-  CheckSquare, LogOut, Zap,
+  CheckSquare, LogOut, Zap, User,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth.store'
@@ -103,9 +103,17 @@ export function Sidebar() {
         className="border-t-4 border-[var(--border-strong)] p-6"
         style={{ background: 'var(--bg-tertiary)' }}
       >
-        <div className="flex items-start gap-4">
-          <div
-            className="flex h-14 w-14 shrink-0 items-center justify-center border-2 border-[var(--accent-electric)] text-xl font-black"
+        <div className="flex items-start gap-4 mb-4">
+          <NavLink
+            to="/profile"
+            className={({ isActive }) =>
+              cn(
+                'flex h-14 w-14 shrink-0 items-center justify-center border-2 text-xl font-black transition-all',
+                isActive
+                  ? 'border-[var(--accent-electric)]'
+                  : 'border-[var(--accent-electric)] hover:border-[var(--accent-cyber)]'
+              )
+            }
             style={{
               fontFamily: 'var(--font-display)',
               color: 'var(--accent-electric)',
@@ -113,7 +121,7 @@ export function Sidebar() {
             }}
           >
             {initials}
-          </div>
+          </NavLink>
           <div className="min-w-0 flex-1">
             <p
               className="truncate text-sm font-bold uppercase tracking-wide"
