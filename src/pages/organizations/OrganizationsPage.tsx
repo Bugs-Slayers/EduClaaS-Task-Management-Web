@@ -42,95 +42,130 @@ export function OrganizationsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Organizations"
-        description="Manage your organizations and teams"
-        action={
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="pb-8" style={{ borderBottom: '2px solid var(--border-medium)' }}>
+        <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: 'var(--accent-electric)' }}>
+          Team Management
+        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-5xl font-black" style={{ color: 'var(--text-primary)' }}>
+              Organizations
+            </h1>
+            <p className="mt-3 text-lg" style={{ color: 'var(--text-secondary)' }}>
+              Manage your organizations and collaborate with teams
+            </p>
+          </div>
+          <Button 
+            onClick={() => setCreateOpen(true)}
+            className="px-6 h-11"
+            style={{ background: 'var(--accent-electric)', color: 'var(--text-inverse)' }}
+          >
+            <Plus className="mr-2 h-5 w-5" />
             New Organization
           </Button>
-        }
-      />
+        </div>
+      </div>
 
       {isLoading ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-40 rounded-xl" />
+            <div key={i} className="h-48 rounded-xl" style={{ background: 'var(--bg-secondary)' }} />
           ))}
         </div>
       ) : !orgs || orgs.length === 0 ? (
-        <EmptyState
-          icon={Building2}
-          title="No organizations yet"
-          description="Create your first organization to start collaborating with your team."
-          action={{ label: 'Create Organization', onClick: () => setCreateOpen(true) }}
-        />
+        <div className="flex flex-col items-center justify-center py-16 px-4 rounded-xl" style={{ background: 'var(--bg-secondary)' }}>
+          <Building2 className="h-12 w-12 mb-4" style={{ color: 'var(--text-tertiary)' }} />
+          <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>No organizations yet</h3>
+          <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>Create your first organization to start collaborating with your team.</p>
+          <Button 
+            onClick={() => setCreateOpen(true)}
+            style={{ background: 'var(--accent-electric)', color: 'var(--text-inverse)' }}
+          >
+            Create Organization
+          </Button>
+        </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {orgs.map((org) => (
-            <Card key={org.id} className="group relative hover:shadow-md transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                      <Building2 className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-base">{org.name}</CardTitle>
-                      <CardDescription className="text-xs">
-                        {org.members.length} {org.members.length === 1 ? 'member' : 'members'}
-                      </CardDescription>
-                    </div>
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon-sm" className="opacity-0 group-hover:opacity-100">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => navigate(`/organizations/${org.id}`)}>
-                        <Building2 className="mr-2 h-4 w-4" />
-                        View Details
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => { setSelected(org); setInviteOpen(true) }}>
-                        <UserPlus className="mr-2 h-4 w-4" />
-                        Invite member
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => { setSelected(org); setEditOpen(true) }}>
-                        <Pencil className="mr-2 h-4 w-4" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => { setSelected(org); setDeleteOpen(true) }}
-                        className="text-destructive focus:text-destructive"
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="mb-3 line-clamp-2 text-sm text-muted-foreground">
-                  {org.description || 'No description provided'}
-                </p>
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Created {formatDistanceToNow(new Date(org.created_at), { addSuffix: true })}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => navigate(`/projects?org=${org.id}`)}
-                    className="h-7 text-xs"
+            <div 
+              key={org.id} 
+              className="group p-6 rounded-xl border transition-all hover:border-current cursor-pointer"
+              style={{
+                background: 'var(--bg-secondary)',
+                borderColor: 'var(--border-medium)',
+              }}
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3 flex-1">
+                  <div 
+                    className="flex h-12 w-12 items-center justify-center rounded-lg flex-shrink-0"
+                    style={{ background: 'var(--bg-tertiary)' }}
                   >
-                    View projects
-                  </Button>
+                    <Building2 className="h-6 w-6" style={{ color: 'var(--accent-electric)' }} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+                      {org.name}
+                    </h3>
+                    <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
+                      {org.members.length} {org.members.length === 1 ? 'member' : 'members'}
+                    </p>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="icon-sm" 
+                      className="opacity-0 group-hover:opacity-100 h-8 w-8"
+                    >
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => navigate(`/organizations/${org.id}`)}>
+                      <Building2 className="mr-2 h-4 w-4" />
+                      View Details
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => { setSelected(org); setInviteOpen(true) }}>
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      Invite member
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => { setSelected(org); setEditOpen(true) }}>
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => { setSelected(org); setDeleteOpen(true) }}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              
+              <p className="mb-4 line-clamp-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                {org.description || 'No description provided'}
+              </p>
+              
+              <div className="flex items-center justify-between pt-4" style={{ borderTop: '1px solid var(--border-medium)' }}>
+                <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                  Created {formatDistanceToNow(new Date(org.created_at), { addSuffix: true })}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate(`/projects?org=${org.id}`)}
+                  className="h-8 text-xs"
+                >
+                  Projects →
+                </Button>
+              </div>
+            </div>
           ))}
         </div>
       )}
