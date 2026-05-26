@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Plus, CheckSquare, MoreVertical, Pencil, Trash2, ArrowRight } from 'lucide-react'
+import { Plus, CheckSquare, MoreVertical, Pencil, Trash2, GripVertical } from 'lucide-react'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -11,6 +12,14 @@ import { useTasks, useCreateTask, useUpdateTask, useDeleteTask } from '@/hooks/u
 import { TaskFormDialog } from './TaskFormDialog'
 import type { Task, TaskStatus } from '@/types'
 import { formatDistanceToNow } from 'date-fns'
+
+const TASK_STATUSES: { id: TaskStatus; label: string }[] = [
+  { id: 'todo', label: 'To Do' },
+  { id: 'in_progress', label: 'In Progress' },
+  { id: 'in_review', label: 'In Review' },
+  { id: 'done', label: 'Done' },
+  { id: 'blocked', label: 'Blocked' },
+]
 
 export function TasksPage() {
   const [params] = useSearchParams()
@@ -24,9 +33,12 @@ export function TasksPage() {
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [selected, setSelected] = useState<Task | null>(null)
-  const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all')
+  const [draggedTask, setDraggedTask] = useState<Task | null>(null)
 
-  const filteredTasks = tasks?.filter((t) => statusFilter === 'all' || t.status === statusFilter) ?? []
+  const tasksByStatus = TASK_STATUSES.reduce((acc, status) => {
+    acc[status.id] = tasks?.filter((t) => t.status === status.id) ?? []
+    return acc
+  }, {} as Record<TaskStatus, Task[]>)
 
   const handleCreate = (data: any) => {
     create(data, { onSuccess: () => setCreateOpen(false) })
@@ -42,8 +54,22 @@ export function TasksPage() {
     deleteTask(selected.id, { onSuccess: () => setDeleteOpen(false) })
   }
 
-  const handleQuickStatusChange = (task: Task, newStatus: TaskStatus) => {
-    update({ id: task.id, data: { status: newStatus } })
+  const handleDragStart = (task: Task) => {
+    setDraggedTask(task)
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+  }
+
+  const handleDrop = (status: TaskStatus) => {
+    if (!draggedTask) return
+    if (draggedTask.status === status) {
+      setDraggedTask(null)
+      return
+    }
+    update({ id: draggedTask.id, data: { status } })
+    setDraggedTask(null)
   }
 
   const statusOptions: Array<{ value: TaskStatus | 'all'; label: string; color: string }> = [
@@ -56,233 +82,133 @@ export function TasksPage() {
   ]
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1
-            className="text-4xl mb-2"
-            style={{ fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}
-          >
-            TASKS
-          </h1>
-          <p
-            className="text-lg italic"
-            style={{ fontFamily: 'var(--font-serif)', color: 'var(--text-secondary)' }}
-          >
-            Manage and track your work items
-          </p>
-        </div>
-        <button
-          onClick={() => setCreateOpen(true)}
-          className="group flex items-center gap-3 border-3 border-[var(--accent-electric)] px-6 py-3 font-bold uppercase tracking-wide transition-all hover:translate-x-1 hover:translate-y-1"
-          style={{
-            fontFamily: 'var(--font-display)',
-            color: 'var(--accent-electric)',
-            background: 'var(--bg-primary)'
-          }}
-        >
-          <Plus className="h-5 w-5" />
-          New Task
-        </button>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Kanban Board"
+        description="Drag and drop tasks to organize your work"
+        action={
+          <Button onClick={() => setCreateOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            New Task
+          </Button>
+        }
+      />
 
-      {/* Filter Tabs */}
-      <div className="flex flex-wrap gap-3">
-        {statusOptions.map((option) => (
-          <button
-            key={option.value}
-            onClick={() => setStatusFilter(option.value)}
-            className="border-2 px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all hover:translate-x-0.5"
-            style={{
-              fontFamily: 'var(--font-display)',
-              borderColor: statusFilter === option.value ? option.color : 'var(--border-medium)',
-              color: statusFilter === option.value ? option.color : 'var(--text-tertiary)',
-              background: statusFilter === option.value ? 'var(--bg-secondary)' : 'transparent'
-            }}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Tasks List */}
       {isLoading ? (
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
           {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-24" />
+            <div key={i} className="space-y-3">
+              <Skeleton className="h-10 rounded" />
+              {Array.from({ length: 3 }).map((_, j) => (
+                <Skeleton key={j} className="h-32 rounded-lg" />
+              ))}
+            </div>
           ))}
         </div>
-      ) : filteredTasks.length === 0 ? (
-        <div
-          className="border-3 border-[var(--border-strong)] p-16 text-center"
-          style={{ background: 'var(--bg-secondary)' }}
-        >
-          <CheckSquare className="mx-auto h-16 w-16 mb-6" style={{ color: 'var(--text-tertiary)' }} />
-          <h3
-            className="text-2xl mb-3"
-            style={{ fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}
-          >
-            NO TASKS FOUND
-          </h3>
-          <p
-            className="text-base mb-6"
-            style={{ fontFamily: 'var(--font-serif)', color: 'var(--text-secondary)' }}
-          >
-            {statusFilter === 'all'
-              ? 'Create your first task to get started.'
-              : `No tasks with status "${statusFilter}".`}
-          </p>
-          {statusFilter === 'all' && (
-            <button
-              onClick={() => setCreateOpen(true)}
-              className="inline-flex items-center gap-2 border-2 border-[var(--accent-electric)] px-6 py-3 font-bold uppercase tracking-wide transition-all hover:translate-x-1"
-              style={{
-                fontFamily: 'var(--font-display)',
-                color: 'var(--accent-electric)',
-                background: 'var(--bg-primary)'
-              }}
-            >
-              <Plus className="h-4 w-4" />
-              Create Task
-            </button>
-          )}
-        </div>
       ) : (
-        <div className="space-y-4">
-          {filteredTasks.map((task, idx) => (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-5 overflow-x-auto">
+          {TASK_STATUSES.map((status) => (
             <div
-              key={task.id}
-              className={`group border-3 border-[var(--border-strong)] p-6 transition-all hover:border-[var(--accent-electric)] hover:translate-x-1 animate-slide-up stagger-${Math.min(idx + 1, 5)}`}
-              style={{ background: 'var(--bg-secondary)' }}
+              key={status.id}
+              onDragOver={handleDragOver}
+              onDrop={() => handleDrop(status.id)}
+              className="flex flex-col gap-3 min-h-96 p-4 rounded-lg bg-muted/30 border border-dashed transition-colors"
             >
-              <div className="flex items-start justify-between gap-6">
-                <div className="min-w-0 flex-1">
-                  <h3
-                    className="text-lg mb-2 truncate"
-                    style={{ fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}
-                  >
-                    {task.title}
-                  </h3>
-                  {task.description && (
-                    <p
-                      className="text-sm mb-3 line-clamp-2"
-                      style={{ fontFamily: 'var(--font-serif)', color: 'var(--text-secondary)' }}
-                    >
-                      {task.description}
-                    </p>
-                  )}
-                  <div className="flex flex-wrap items-center gap-3">
-                    <span
-                      className="text-xs uppercase tracking-wider"
-                      style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-tertiary)' }}
-                    >
-                      {formatDistanceToNow(new Date(task.created_at), { addSuffix: true })}
-                    </span>
-                    {task.tags.length > 0 && (
-                      <>
-                        <span style={{ color: 'var(--text-tertiary)' }}>•</span>
-                        <div className="flex gap-2">
-                          {task.tags.slice(0, 3).map((tag) => (
-                            <span
-                              key={tag}
-                              className="border border-[var(--border-medium)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
-                              style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-tertiary)' }}
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      </>
-                    )}
+              {/* Column Header */}
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-sm">{status.label}</h3>
+                <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded">
+                  {tasksByStatus[status.id].length}
+                </span>
+              </div>
+
+              {/* Tasks */}
+              <div className="flex flex-col gap-2 flex-1">
+                {tasksByStatus[status.id].length === 0 ? (
+                  <div className="flex-1 flex items-center justify-center text-center">
+                    <p className="text-xs text-muted-foreground">No tasks</p>
                   </div>
-                </div>
-                <div className="flex shrink-0 items-center gap-3">
-                  <StatusBadge type="priority" value={task.priority} />
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button className="transition-transform hover:scale-105">
-                        <StatusBadge type="taskStatus" value={task.status} className="cursor-pointer" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                      align="end"
-                      className="border-2 border-[var(--border-strong)] p-2"
-                      style={{ background: 'var(--bg-elevated)' }}
-                      sideOffset={8}
+                ) : (
+                  tasksByStatus[status.id].map((task) => (
+                    <Card
+                      key={task.id}
+                      draggable
+                      onDragStart={() => handleDragStart(task)}
+                      onDragEnd={() => setDraggedTask(null)}
+                      className={`group cursor-grab active:cursor-grabbing p-3 transition-all hover:shadow-md border-l-4 ${
+                        draggedTask?.id === task.id ? 'opacity-50' : ''
+                      }`}
+                      style={{
+                        borderLeftColor:
+                          task.priority === 'critical'
+                            ? '#ef4444'
+                            : task.priority === 'high'
+                              ? '#f97316'
+                              : task.priority === 'medium'
+                                ? '#eab308'
+                                : '#84cc16',
+                      }}
                     >
-                      <DropdownMenuItem
-                        onClick={() => handleQuickStatusChange(task, 'todo')}
-                        className="font-bold uppercase tracking-wide text-xs"
-                        style={{ fontFamily: 'var(--font-display)' }}
-                      >
-                        TODO
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleQuickStatusChange(task, 'in_progress')}
-                        className="font-bold uppercase tracking-wide text-xs"
-                        style={{ fontFamily: 'var(--font-display)' }}
-                      >
-                        IN PROGRESS
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleQuickStatusChange(task, 'in_review')}
-                        className="font-bold uppercase tracking-wide text-xs"
-                        style={{ fontFamily: 'var(--font-display)' }}
-                      >
-                        REVIEW
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleQuickStatusChange(task, 'done')}
-                        className="font-bold uppercase tracking-wide text-xs"
-                        style={{ fontFamily: 'var(--font-display)' }}
-                      >
-                        DONE
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleQuickStatusChange(task, 'blocked')}
-                        className="font-bold uppercase tracking-wide text-xs"
-                        style={{ fontFamily: 'var(--font-display)' }}
-                      >
-                        BLOCKED
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button
-                        className="border-2 border-[var(--border-medium)] p-2 opacity-0 transition-all group-hover:opacity-100 hover:border-[var(--accent-electric)]"
-                        style={{ background: 'var(--bg-primary)' }}
-                      >
-                        <MoreVertical className="h-4 w-4" style={{ color: 'var(--text-secondary)' }} />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                      align="end"
-                      className="border-2 border-[var(--border-strong)] p-2"
-                      style={{ background: 'var(--bg-elevated)' }}
-                      sideOffset={8}
-                    >
-                      <DropdownMenuItem
-                        onClick={() => { setSelected(task); setEditOpen(true) }}
-                        className="font-bold uppercase tracking-wide text-xs"
-                        style={{ fontFamily: 'var(--font-display)' }}
-                      >
-                        <Pencil className="mr-2 h-4 w-4" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => { setSelected(task); setDeleteOpen(true) }}
-                        variant="destructive"
-                        className="font-bold uppercase tracking-wide text-xs"
-                        style={{ fontFamily: 'var(--font-display)' }}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
+                      <CardContent className="p-0 space-y-2">
+                        <div className="flex items-start gap-2">
+                          <GripVertical className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100" />
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-medium truncate">{task.title}</h4>
+                            {task.description && (
+                              <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{task.description}</p>
+                            )}
+                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                className="h-6 w-6 opacity-0 group-hover:opacity-100"
+                              >
+                                <MoreVertical className="h-3 w-3" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-40">
+                              <DropdownMenuItem onClick={() => { setSelected(task); setEditOpen(true) }}>
+                                <Pencil className="mr-2 h-3 w-3" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => { setSelected(task); setDeleteOpen(true) }}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-3 w-3" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+
+                        {/* Task Meta */}
+                        <div className="flex items-center justify-between gap-2 text-xs">
+                          <span className="text-muted-foreground">
+                            {formatDistanceToNow(new Date(task.created_at), { addSuffix: true })}
+                          </span>
+                          <StatusBadge type="priority" value={task.priority} />
+                        </div>
+
+                        {/* Tags */}
+                        {task.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {task.tags.slice(0, 2).map((tag) => (
+                              <span key={tag} className="text-xs rounded bg-muted px-2 py-1">
+                                {tag}
+                              </span>
+                            ))}
+                            {task.tags.length > 2 && (
+                              <span className="text-xs text-muted-foreground">+{task.tags.length - 2}</span>
+                            )}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
               </div>
             </div>
           ))}
