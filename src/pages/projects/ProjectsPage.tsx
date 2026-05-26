@@ -58,7 +58,7 @@ export function ProjectsPage() {
               Organize and track your project work
             </p>
           </div>
-          <Button 
+          <Button
             onClick={() => setCreateOpen(true)}
             className="px-6 h-11"
             style={{ background: 'var(--accent-electric)', color: 'var(--text-inverse)' }}
@@ -80,7 +80,7 @@ export function ProjectsPage() {
           <FolderKanban className="h-12 w-12 mb-4" style={{ color: 'var(--text-tertiary)' }} />
           <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>No projects yet</h3>
           <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>Create your first project to organize your tasks.</p>
-          <Button 
+          <Button
             onClick={() => setCreateOpen(true)}
             style={{ background: 'var(--accent-electric)', color: 'var(--text-inverse)' }}
           >
@@ -90,8 +90,8 @@ export function ProjectsPage() {
       ) : (
         <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {projects.map((proj) => (
-            <div 
-              key={proj.id} 
+            <div
+              key={proj.id}
               className="group p-6 rounded-xl border transition-all hover:border-current"
               style={{
                 background: 'var(--bg-secondary)',
@@ -100,14 +100,14 @@ export function ProjectsPage() {
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3 flex-1">
-                  <div 
+                  <div
                     className="flex h-12 w-12 items-center justify-center rounded-lg flex-shrink-0"
                     style={{ background: 'var(--bg-tertiary)' }}
                   >
                     <FolderKanban className="h-6 w-6" style={{ color: 'var(--accent-cyber)' }} />
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+                  <div className="min-w-0 flex-1 overflow-hidden">
+                    <h3 className="font-semibold truncate leading-tight" style={{ color: 'var(--text-primary)', maxWidth: '100%' }}>
                       {proj.name}
                     </h3>
                     <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
@@ -117,9 +117,9 @@ export function ProjectsPage() {
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button 
-                      variant="ghost" 
-                      size="icon-sm" 
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
                       className="opacity-0 group-hover:opacity-100 h-8 w-8"
                     >
                       <MoreVertical className="h-4 w-4" />

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { authApi } from "@/api/auth";
 import { useAuthStore } from "@/store/auth.store";
@@ -8,6 +8,7 @@ import type { LoginRequest, RegisterRequest } from "@/types";
 export function useLogin() {
   const { setAuth } = useAuthStore();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   return useMutation({
     mutationFn: (data: LoginRequest) => authApi.login(data),
@@ -15,7 +16,8 @@ export function useLogin() {
       const { user, token } = res.data.data!;
       setAuth(user, token);
       toast.success(`Welcome back, ${user.name}!`);
-      navigate("/dashboard");
+      const redirect = searchParams.get("redirect");
+      navigate(redirect ?? "/dashboard");
     },
     onError: (err: any) => {
       toast.error(err.response?.data?.error ?? "Login failed");
@@ -26,6 +28,7 @@ export function useLogin() {
 export function useRegister() {
   const { setAuth } = useAuthStore();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   return useMutation({
     mutationFn: (data: RegisterRequest) => authApi.register(data),
@@ -33,7 +36,8 @@ export function useRegister() {
       const { user, token } = res.data.data!;
       setAuth(user, token);
       toast.success("Account created successfully!");
-      navigate("/dashboard");
+      const redirect = searchParams.get("redirect");
+      navigate(redirect ?? "/dashboard");
     },
     onError: (err: any) => {
       toast.error(err.response?.data?.error ?? "Registration failed");

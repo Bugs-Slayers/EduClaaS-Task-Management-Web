@@ -139,6 +139,58 @@ export interface UpdateTaskRequest {
   tags?: string[];
 }
 
+// ─── Invitation ───────────────────────────────────────────────────────────────
+export type InvitationStatus =
+  | "pending"
+  | "accepted"
+  | "declined"
+  | "revoked"
+  | "expired";
+export type InvitationType = "organization" | "project";
+
+export interface Invitation {
+  id: string;
+  type: InvitationType;
+  email: string;
+  invited_by?: string;
+  resource_id?: string;
+  role?: OrgRole;
+  status: InvitationStatus;
+  token?: string;
+  expires_at?: string;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface SendOrgInvitationRequest {
+  email: string;
+  role?: "admin" | "member";
+}
+
+export interface SendProjectInvitationRequest {
+  email: string;
+}
+
+export interface AcceptDeclineInvitationRequest {
+  token: string;
+}
+
+// ─── Member (enriched) ────────────────────────────────────────────────────────
+export interface OrgMemberEnriched {
+  user_id: string;
+  role: OrgRole;
+  joined_at: string;
+  name: string;
+  email: string;
+}
+
+export interface ProjectMember {
+  user_id: string;
+  name: string;
+  email: string;
+  is_owner: boolean;
+}
+
 // ─── API Response ─────────────────────────────────────────────────────────────
 export interface ApiResponse<T> {
   success: boolean;

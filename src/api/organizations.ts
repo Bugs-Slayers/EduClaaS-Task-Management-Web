@@ -4,7 +4,10 @@ import type {
   Organization,
   CreateOrgRequest,
   UpdateOrgRequest,
-  InviteMemberRequest,
+  SendOrgInvitationRequest,
+  Invitation,
+  OrgMemberEnriched,
+  OrgRole,
 } from "@/types";
 
 export const orgsApi = {
@@ -21,6 +24,31 @@ export const orgsApi = {
 
   delete: (id: string) => api.delete<ApiResponse<null>>(`/organizations/${id}`),
 
-  invite: (id: string, data: InviteMemberRequest) =>
-    api.post<ApiResponse<null>>(`/organizations/${id}/invite`, data),
+  // ── Invitations ──────────────────────────────────────────────────────────
+  sendInvitation: (id: string, data: SendOrgInvitationRequest) =>
+    api.post<ApiResponse<Invitation>>(`/organizations/${id}/invitations`, data),
+
+  listInvitations: (id: string) =>
+    api.get<ApiResponse<Invitation[]>>(`/organizations/${id}/invitations`),
+
+  revokeInvitation: (id: string, invitationId: string) =>
+    api.delete<ApiResponse<null>>(
+      `/organizations/${id}/invitations/${invitationId}`,
+    ),
+
+  // ── Members ──────────────────────────────────────────────────────────────
+  listMembers: (id: string) =>
+    api.get<ApiResponse<OrgMemberEnriched[]>>(`/organizations/${id}/members`),
+
+  updateMemberRole: (id: string, userId: string, role: OrgRole) =>
+    api.put<ApiResponse<null>>(`/organizations/${id}/members/${userId}/role`, {
+      role,
+    }),
+
+  removeMember: (id: string, userId: string) =>
+    api.delete<ApiResponse<null>>(`/organizations/${id}/members/${userId}`),
+
+  /** @deprecated use sendInvitation instead */
+  invite: (id: string, data: SendOrgInvitationRequest) =>
+    api.post<ApiResponse<null>>(`/organizations/${id}/invitations`, data),
 };

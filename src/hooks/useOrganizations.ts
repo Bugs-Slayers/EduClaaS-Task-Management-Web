@@ -4,12 +4,15 @@ import { orgsApi } from "@/api/organizations";
 import type {
   CreateOrgRequest,
   UpdateOrgRequest,
-  InviteMemberRequest,
+  SendOrgInvitationRequest,
+  OrgRole,
 } from "@/types";
 
 export const ORG_KEYS = {
   all: ["organizations"] as const,
   detail: (id: string) => ["organizations", id] as const,
+  members: (id: string) => ["organizations", id, "members"] as const,
+  invitations: (id: string) => ["organizations", id, "invitations"] as const,
 };
 
 export function useOrganizations() {
@@ -67,15 +70,84 @@ export function useDeleteOrganization() {
   });
 }
 
-export function useInviteMember(orgId: string) {
+// ── Invitations ──────────────────────────────────────────────────────────────
+
+export function useOrgInvitations(orgId: string) {
+  return useQuery({
+    queryKey: ORG_KEYS.invitations(orgId),
+    queryFn: () =>
+      orgsApi.listInvitations(orgId).then((r) => r.data.data ?? []),
+    enabled: !!orgId,
+  });
+}
+
+export function useSendOrgInvitation(orgId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: InviteMemberRequest) => orgsApi.invite(orgId, data),
+    mutationFn: (data: SendOrgInvitationRequest) =>
+      orgsApi.sendInvitation(orgId, data),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ORG_KEYS.detail(orgId) });
+      qc.invalidateQueries({ queryKey: ORG_KEYS.invitations(orgId) });
       toast.success("Invitation sent!");
     },
     onError: (err: any) =>
       toast.error(err.response?.data?.error ?? "Failed to send invitation"),
   });
+}
+
+export function useRevokeOrgInvitation(orgId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (invitationId: string) =>
+      orgsApi.revokeInvitation(orgId, invitationId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ORG_KEYS.invitations(orgId) });
+      toast.success("Invitation revoked");
+    },
+    onError: (err: any) =>
+      toast.error(err.response?.data?.error ?? "Failed to revoke invitation"),
+  });
+}
+
+// ── Members ──────────────────────────────────────────────────────────────────
+
+export function useOrgMembers(orgId: string) {
+  return useQuery({
+    queryKey: ORG_KEYS.members(orgId),
+    queryFn: () => orgsApi.listMembers(orgId).then((r) => r.data.data ?? []),
+    enabled: !!orgId,
+  });
+}
+
+export function useUpdateOrgMemberRole(orgId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, role }: { userId: string; role: OrgRole }) =>
+      orgsApi.updateMemberRole(orgId, userId, role),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ORG_KEYS.members(orgId) });
+      toast.success("Role updated!");
+    },
+    onError: (err: any) =>
+      toast.error(err.response?.data?.error ?? "Failed to update role"),
+  });
+}
+
+export function useRemoveOrgMember(orgId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) => orgsApi.removeMember(orgId, userId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ORG_KEYS.members(orgId) });
+      qc.invalidateQueries({ queryKey: ORG_KEYS.detail(orgId) });
+      toast.success("Member removed");
+    },
+    onError: (err: any) =>
+      toast.error(err.response?.data?.error ?? "Failed to remove member"),
+  });
+}
+
+/** @deprecated use useSendOrgInvitation */
+export function useInviteMember(orgId: string) {
+  return useSendOrgInvitation(orgId);
 }
