@@ -4,53 +4,82 @@
 
 ---
 
-## 1. API Request / Response Flowchart
+## 1. Complete API Request / Response Flowchart
 
 ```mermaid
 flowchart TD
-    Start([🟢 Component triggers action]) --> HookCall[Custom Hook called\ne.g. useCreateTask]
+    Start([🟢 Component action]) --> HookCall[Custom Hook\ne.g. useCreateTask]
 
-    HookCall --> ReactQueryMutation[React Query\nuseMutation triggered]
-    ReactQueryMutation --> AxiosRequest[Axios creates HTTP request]
+    HookCall --> RQMutation[React Query\nuseMutation]
+    RQMutation --> AxiosReq[Axios creates request]
 
-    AxiosRequest --> RequestInterceptor[Request Interceptor runs]
-    RequestInterceptor --> HasToken{Token in\nlocalStorage?}
-    HasToken -->|Yes| AttachToken[Attach Authorization:\nBearer token header]
-    HasToken -->|No| SendWithoutToken[Send without auth header]
+    AxiosReq --> ReqInterceptor[Request Interceptor]
+    ReqInterceptor --> HasToken{Token in\nlocalStorage?}
+    HasToken -->|Yes| AttachJWT[Attach Authorization:\nBearer <token>]
+    HasToken -->|No| SendNoAuth[Send without auth]
 
-    AttachToken --> SendRequest[Send HTTP Request to\nGo/Gin Backend :8080]
-    SendWithoutToken --> SendRequest
+    AttachJWT --> SendHTTP[HTTP Request to\nGo/Gin :8080]
+    SendNoAuth --> SendHTTP
 
-    SendRequest --> CORSCheck{CORS\ncheck passes?}
-    CORSCheck -->|No| CORSError[CORS Error\n403 Forbidden]
-    CORSCheck -->|Yes| JWTCheck{JWT\nvalid?}
+    SendHTTP --> CORSCheck{CORS\nOrigin OK?}
+    CORSCheck -->|No| CORS403[403 Forbidden]
+    CORSCheck -->|Yes| RateLimitCheck{Rate limit\n< 100/min?}
 
-    JWTCheck -->|No token / expired| Return401[Return 401 Unauthorized]
-    JWTCheck -->|Valid| RouteHandler[Route Handler executes]
+    RateLimitCheck -->|No| Rate429[429 Too Many Requests]
+    RateLimitCheck -->|Yes| RouteType{Route\ntype?}
 
-    Return401 --> ResponseInterceptor[Response Interceptor\ncatches 401]
-    ResponseInterceptor --> ClearStorage[Clear localStorage\ntoken + user]
-    ClearStorage --> ClearZustand[Clear Zustand auth state]
-    ClearZustand --> RedirectLogin[window.location = /login]
+    RouteType -->|Public /auth/*| PublicHandler[Auth Handler]
+    RouteType -->|Protected| JWTCheck{JWT\nvalid?}
 
-    RouteHandler --> DBOperation[MongoDB operation\nCRUD]
-    DBOperation --> DBSuccess{DB\noperation OK?}
-    DBSuccess -->|No| ReturnError[Return 4xx / 5xx\n+ error message]
-    DBSuccess -->|Yes| ReturnSuccess[Return 2xx\n+ data payload]
+    JWTCheck -->|Missing| JWT401A[401 Missing token]
+    JWTCheck -->|Invalid| JWT401B[401 Invalid token]
+    JWTCheck -->|Expired| JWT401C[401 Token expired]
+    JWTCheck -->|Valid| ExtractUser[Extract user_id\ninto context]
 
-    ReturnSuccess --> AxiosResponse[Axios receives response]
-    ReturnError --> AxiosResponse
+    ExtractUser --> RouteHandler[Route Handler]
+    PublicHandler --> RouteHandler
 
-    AxiosResponse --> ReactQueryCallback{Success\nor Error?}
-    ReactQueryCallback -->|onSuccess| InvalidateCache[Invalidate related\nReact Query caches]
-    ReactQueryCallback -->|onError| ShowErrorToast[Show error toast\nvia Sonner]
+    RouteHandler --> ParseBody[Parse + validate\nrequest body]
+    ParseBody --> BodyValid{Body\nvalid?}
+    BodyValid -->|No| Bad400[400 Bad Request]
+    BodyValid -->|Yes| CheckPerm{Permission\ncheck?}
 
-    InvalidateCache --> RefetchQueries[Refetch affected queries]
-    RefetchQueries --> UpdateUI[Update UI with fresh data]
-    ShowErrorToast --> UpdateUI
+    CheckPerm -->|Denied| Forbidden403[403 Forbidden]
+    CheckPerm -->|Granted| ServiceCall[Service Layer call]
 
-    UpdateUI --> ShowSuccessToast[Show success toast]
-    ShowSuccessToast --> End([🔴 Action complete])
+    ServiceCall --> DBOp[MongoDB operation]
+    DBOp --> DBResult{DB\nresult?}
+    DBResult -->|Not found| NotFound404[404 Not Found]
+    DBResult -->|DB error| Server500[500 Internal Error]
+    DBResult -->|Success| BuildResp[Build ApiResponse\n{ success, data }]
+
+    BuildResp --> Success2xx[200/201 JSON response]
+
+    Success2xx --> RespInterceptor[Response Interceptor]
+    CORS403 --> RespInterceptor
+    Rate429 --> RespInterceptor
+    JWT401A --> RespInterceptor
+    JWT401B --> RespInterceptor
+    JWT401C --> RespInterceptor
+    Bad400 --> RespInterceptor
+    Forbidden403 --> RespInterceptor
+    NotFound404 --> RespInterceptor
+    Server500 --> RespInterceptor
+
+    RespInterceptor --> Is401{Status\n= 401?}
+    Is401 -->|Yes| ClearAuth[Clear localStorage\nClear Zustand\nwindow.location = /login]
+    Is401 -->|No| RQCallback{Success or\nError?}
+
+    RQCallback -->|onSuccess| InvalidateCache[Invalidate React Query\nrelated caches]
+    RQCallback -->|onError| ShowError[Toast error message]
+
+    InvalidateCache --> Refetch[Refetch affected queries]
+    Refetch --> UpdateUI[Update UI]
+    ShowError --> UpdateUI
+
+    UpdateUI --> ShowToast[Show success toast]
+    ShowToast --> End([🔴 Action complete])
+    ClearAuth --> End2([🔴 Logged out])
 ```
 
 ---
@@ -59,43 +88,43 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    Start([🟢 User navigates to URL]) --> ReadZustand[Read isAuthenticated\nfrom Zustand store]
+    Start([🟢 User navigates]) --> ReadStore[Read Zustand\nisAuthenticated]
 
-    ReadZustand --> IsAuth{isAuthenticated?}
+    ReadStore --> IsAuth{isAuthenticated\n= true?}
 
-    IsAuth -->|No| IsPublicRoute{Route is\npublic?}
-    IsPublicRoute -->|Yes /login or /register| ShowPublicPage[Render public page\nLoginPage / RegisterPage]
-    IsPublicRoute -->|No| RedirectToLogin[Navigate to /login\nreplace history]
+    IsAuth -->|No| IsPublicRoute{Route is\n/login or /register?}
+    IsPublicRoute -->|Yes| RenderPublic[Render AuthLayout\nLoginPage / RegisterPage]
+    IsPublicRoute -->|No| RedirectLogin[Navigate to /login\nreplace history]
 
     IsAuth -->|Yes| IsAuthRoute{Route is\n/login or /register?}
-    IsAuthRoute -->|Yes| RedirectToDashboard[Navigate to /dashboard\nreplace history]
-    IsAuthRoute -->|No| IsKnownRoute{Route\nexists?}
+    IsAuthRoute -->|Yes| RedirectDash[Navigate to /dashboard\nreplace history]
+    IsAuthRoute -->|No| IsKnown{Route\nexists?}
 
-    IsKnownRoute -->|No| RedirectDefault[Navigate to /dashboard]
-    IsKnownRoute -->|Yes| RenderAppLayout[Render AppLayout\nSidebar + Outlet]
+    IsKnown -->|No| Redirect404[Navigate to /dashboard]
+    IsKnown -->|Yes| RenderApp[Render AppLayout\nSidebar + Outlet]
 
-    RenderAppLayout --> RouteMatch{Match route}
-    RouteMatch -->|/dashboard| RenderDashboard[DashboardPage]
-    RouteMatch -->|/organizations| RenderOrgs[OrganizationsPage]
-    RouteMatch -->|/organizations/:id| RenderOrgDetail[OrgDetailPage]
-    RouteMatch -->|/projects| RenderProjects[ProjectsPage]
-    RouteMatch -->|/projects/:id| RenderProjectDetail[ProjectDetailPage]
-    RouteMatch -->|/tasks| RenderTasks[TasksPage]
-    RouteMatch -->|/tasks/:id| RenderTaskDetail[TaskDetailPage]
-    RouteMatch -->|/profile| RenderProfile[ProfilePage]
+    RenderApp --> RouteMatch{Match route}
+    RouteMatch -->|/dashboard| Dashboard[DashboardPage\nStats + Recent]
+    RouteMatch -->|/organizations| Orgs[OrganizationsPage]
+    RouteMatch -->|/organizations/:id| OrgDetail[OrgDetailPage]
+    RouteMatch -->|/projects| Projects[ProjectsPage]
+    RouteMatch -->|/projects/:id| ProjDetail[ProjectDetailPage]
+    RouteMatch -->|/tasks| Tasks[TasksPage]
+    RouteMatch -->|/tasks/:id| TaskDetail[TaskDetailPage]
+    RouteMatch -->|/profile| Profile[ProfilePage]
 
-    RenderDashboard --> End([🔴 Page rendered])
-    RenderOrgs --> End
-    RenderOrgDetail --> End
-    RenderProjects --> End
-    RenderProjectDetail --> End
-    RenderTasks --> End
-    RenderTaskDetail --> End
-    RenderProfile --> End
-    ShowPublicPage --> End
-    RedirectToLogin --> End
-    RedirectToDashboard --> End
-    RedirectDefault --> End
+    Dashboard --> End([🔴 Page rendered])
+    Orgs --> End
+    OrgDetail --> End
+    Projects --> End
+    ProjDetail --> End
+    Tasks --> End
+    TaskDetail --> End
+    Profile --> End
+    RenderPublic --> End
+    RedirectLogin --> End
+    RedirectDash --> End
+    Redirect404 --> End
 ```
 
 ---
@@ -104,59 +133,64 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    Start([🟢 User on Tasks Page]) --> LoadTasks[Load tasks via\nuseTasks hook]
-    LoadTasks --> FetchTasks[GET /api/v1/tasks\noptional ?project_id=]
-    FetchTasks --> RenderList[Render task list\nwith status badges]
+    Start([🟢 User on Tasks Page]) --> LoadTasks[useTasks hook\nGET /api/v1/tasks]
+    LoadTasks --> RenderList[Render task list\nwith StatusBadge]
 
     RenderList --> UserAction{User\naction?}
 
     %% ── CREATE ──────────────────────────────────────────────────────────────
-    UserAction -->|Click New Task| OpenCreateDialog[Open TaskFormDialog\ncreate mode]
-    OpenCreateDialog --> FillCreateForm[Fill: title, description,\nproject, priority, status,\ndue date, tags, assignees]
-    FillCreateForm --> ValidateCreate{Form\nvalid?}
-    ValidateCreate -->|No| ShowCreateErrors[Show validation errors]
-    ShowCreateErrors --> FillCreateForm
-    ValidateCreate -->|Yes| PostTask[POST /api/v1/tasks]
+    UserAction -->|New Task| OpenCreate[Open TaskFormDialog\nmode=create]
+    OpenCreate --> FillCreate[Fill: title, description,\nproject, priority, status,\ndue date, tags, assignees]
+    FillCreate --> ValidCreate{Zod\nvalid?}
+    ValidCreate -->|No| ShowCreateErr[Show validation errors]
+    ShowCreateErr --> FillCreate
+    ValidCreate -->|Yes| CheckProjAccess[CheckUserAccess\nproject membership]
+    CheckProjAccess --> ProjOK{Access?}
+    ProjOK -->|No| Forbidden[403 Access denied]
+    ProjOK -->|Yes| PostTask[POST /api/v1/tasks]
     PostTask --> CreateSuccess{Success?}
-    CreateSuccess -->|Yes| InvalidateTaskCache[Invalidate task cache]
-    CreateSuccess -->|No| ShowCreateError[Toast: Failed to create]
-    InvalidateTaskCache --> CloseCreateDialog[Close dialog]
-    CloseCreateDialog --> ShowCreateToast[Toast: Task created!]
+    CreateSuccess -->|Yes| InvalidateTask[Invalidate task cache]
+    CreateSuccess -->|No| ShowCreateFail[Toast: Failed to create]
+    InvalidateTask --> SendEmails[Async: Send assignment emails]
+    SendEmails --> CloseCreate[Close dialog]
+    CloseCreate --> ShowCreateToast[Toast: Task created!]
     ShowCreateToast --> RenderList
 
     %% ── READ ────────────────────────────────────────────────────────────────
-    UserAction -->|Click task row| NavigateDetail[Navigate to /tasks/:id]
-    NavigateDetail --> FetchTaskDetail[GET /api/v1/tasks/:id]
-    FetchTaskDetail --> RenderDetail[Render TaskDetailPage\nfull task info]
+    UserAction -->|Click row| NavDetail[Navigate to /tasks/:id]
+    NavDetail --> FetchDetail[GET /api/v1/tasks/:id]
+    FetchDetail --> RenderDetail[Render TaskDetailPage]
 
     %% ── UPDATE ──────────────────────────────────────────────────────────────
-    UserAction -->|Click Edit| OpenEditDialog[Open TaskFormDialog\nedit mode, pre-filled]
-    OpenEditDialog --> FillEditForm[Modify fields]
-    FillEditForm --> ValidateEdit{Form\nvalid?}
-    ValidateEdit -->|No| ShowEditErrors[Show validation errors]
-    ShowEditErrors --> FillEditForm
-    ValidateEdit -->|Yes| PutTask[PUT /api/v1/tasks/:id]
+    UserAction -->|Edit| OpenEdit[Open TaskFormDialog\nmode=edit, pre-filled]
+    OpenEdit --> FillEdit[Modify fields]
+    FillEdit --> ValidEdit{Zod\nvalid?}
+    ValidEdit -->|No| ShowEditErr[Show validation errors]
+    ShowEditErr --> FillEdit
+    ValidEdit -->|Yes| PutTask[PUT /api/v1/tasks/:id]
     PutTask --> UpdateSuccess{Success?}
-    UpdateSuccess -->|Yes| InvalidateTaskCacheUpdate[Invalidate task caches]
-    UpdateSuccess -->|No| ShowUpdateError[Toast: Failed to update]
-    InvalidateTaskCacheUpdate --> CloseEditDialog[Close dialog]
-    CloseEditDialog --> ShowUpdateToast[Toast: Task updated!]
+    UpdateSuccess -->|Yes| InvalidateUpdate[Invalidate caches]
+    UpdateSuccess -->|No| ShowUpdateFail[Toast: Failed to update]
+    InvalidateUpdate --> CloseEdit[Close dialog]
+    CloseEdit --> ShowUpdateToast[Toast: Task updated!]
     ShowUpdateToast --> RenderList
 
     %% ── DELETE ──────────────────────────────────────────────────────────────
-    UserAction -->|Click Delete| OpenConfirmDialog[Open ConfirmDialog]
-    OpenConfirmDialog --> UserConfirm{User\nconfirms?}
+    UserAction -->|Delete| OpenConfirm[Open ConfirmDialog]
+    OpenConfirm --> UserConfirm{User\nconfirms?}
     UserConfirm -->|Cancel| RenderList
-    UserConfirm -->|Confirm| DeleteTask[DELETE /api/v1/tasks/:id]
-    DeleteTask --> DeleteSuccess{Success?}
-    DeleteSuccess -->|Yes| InvalidateTaskCacheDelete[Invalidate task cache]
-    DeleteSuccess -->|No| ShowDeleteError[Toast: Failed to delete]
-    InvalidateTaskCacheDelete --> ShowDeleteToast[Toast: Task deleted]
-    ShowDeleteToast --> RenderList
+    UserConfirm -->|Confirm| CheckCreator{User is\ncreator?}
+    CheckCreator -->|No| ForbiddenDel[403 Only creator can delete]
+    CheckCreator -->|Yes| DelTask[DELETE /api/v1/tasks/:id]
+    DelTask --> DeleteSuccess{Success?}
+    DeleteSuccess -->|Yes| InvalidateDel[Invalidate cache]
+    DeleteSuccess -->|No| ShowDelFail[Toast: Failed to delete]
+    InvalidateDel --> ShowDelToast[Toast: Task deleted]
+    ShowDelToast --> RenderList
 
     %% ── FILTER ──────────────────────────────────────────────────────────────
-    UserAction -->|Apply filter| FilterTasks[Filter by status /\npriority / assignee]
-    FilterTasks --> RenderList
+    UserAction -->|Filter| ApplyFilter[Filter by status /\npriority / assignee\nclient-side]
+    ApplyFilter --> RenderList
 ```
 
 ---
@@ -165,64 +199,69 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    Start([🟢 HTTP Request arrives\nat :8080]) --> CORSMiddleware[CORS Middleware\nCheck Origin header]
+    Start([🟢 HTTP Request :8080]) --> GinRouter[Gin Router]
 
-    CORSMiddleware --> OriginAllowed{Origin\nallowed?}
-    OriginAllowed -->|No| Return403[Return 403 Forbidden]
-    OriginAllowed -->|Yes| RouteMatch[Gin Router\nmatches route]
+    GinRouter --> CORSMw[CORS Middleware]
+    CORSMw --> OriginCheck{Origin\nallowed?}
+    OriginCheck -->|No| Return403[403 Forbidden]
+    OriginCheck -->|Yes| LoggerMw[Logger Middleware]
 
-    RouteMatch --> IsPublicRoute{Public\nroute?}
-    IsPublicRoute -->|Yes /auth/*| AuthHandler[Auth Handler\nregister / login]
-    IsPublicRoute -->|No| JWTMiddleware[JWT Middleware\nextract Bearer token]
+    LoggerMw --> RecoveryMw[Recovery Middleware\npanic handler]
+    RecoveryMw --> RateLimitMw[Rate Limiter Middleware]
 
-    JWTMiddleware --> TokenPresent{Token\npresent?}
-    TokenPresent -->|No| Return401A[Return 401\nMissing token]
-    TokenPresent -->|Yes| ValidateJWT{JWT\nsignature valid?}
+    RateLimitMw --> GetIP[Get client IP]
+    GetIP --> CheckRate{Requests\n< 100/min?}
+    CheckRate -->|No| Return429[429 Too Many Requests]
+    CheckRate -->|Yes| RouteMatch[Match route]
 
-    ValidateJWT -->|No| Return401B[Return 401\nInvalid token]
-    ValidateJWT -->|Expired| Return401C[Return 401\nToken expired]
-    ValidateJWT -->|Valid| ExtractUserID[Extract user_id\nfrom JWT claims]
+    RouteMatch --> IsPublic{Public\nroute?}
+    IsPublic -->|Yes /auth/*| AuthHandler[AuthHandler]
+    IsPublic -->|No| JWTMw[JWT Middleware]
 
-    ExtractUserID --> RouteHandler[Route Handler\nexecutes business logic]
+    JWTMw --> ParseHeader[Parse Authorization header]
+    ParseHeader --> HeaderOK{Bearer\ntoken present?}
+    HeaderOK -->|No| Return401A[401 Missing token]
+    HeaderOK -->|Yes| ValidateJWT[ValidateJWT helper]
 
-    RouteHandler --> ParseBody[Parse + validate\nrequest body]
-    ParseBody --> BodyValid{Body\nvalid?}
-    BodyValid -->|No| Return400[Return 400\nBad Request + errors]
-    BodyValid -->|Yes| CheckPermission{Permission\ncheck?}
+    ValidateJWT --> TokenValid{Token\nvalid?}
+    TokenValid -->|Invalid signature| Return401B[401 Invalid token]
+    TokenValid -->|Expired| Return401C[401 Expired]
+    TokenValid -->|Valid| ExtractClaims[Extract user_id + email\nSet in context]
 
-    CheckPermission -->|Unauthorized| Return403B[Return 403\nForbidden]
-    CheckPermission -->|Authorized| MongoOperation[Execute MongoDB\noperation]
+    ExtractClaims --> RouteHandler[Route Handler]
+    AuthHandler --> RouteHandler
 
-    MongoOperation --> DBResult{DB\nresult?}
-    DBResult -->|Not found| Return404[Return 404\nNot Found]
-    DBResult -->|DB error| Return500[Return 500\nInternal Server Error]
-    DBResult -->|Success| BuildResponse[Build ApiResponse\n{ success, data }]
+    RouteHandler --> BindJSON[Bind + validate JSON]
+    BindJSON --> BindOK{Binding\nOK?}
+    BindOK -->|No| Return400[400 Bad Request]
+    BindOK -->|Yes| CheckPerm[Check permissions\nCheckUserAccess / CheckUserRole]
 
-    BuildResponse --> Return2xx[Return 200/201\nwith JSON payload]
+    CheckPerm --> PermOK{Permission\ngranted?}
+    PermOK -->|No| Return403B[403 Forbidden]
+    PermOK -->|Yes| ServiceCall[Service method call]
 
-    AuthHandler --> HashOrVerify{Register\nor Login?}
-    HashOrVerify -->|Register| HashPassword[Hash password\nbcrypt]
-    HashOrVerify -->|Login| VerifyPassword[Verify password\nhash]
+    ServiceCall --> DBOp[MongoDB operation]
+    DBOp --> DBResult{Result?}
+    DBResult -->|Not found| Return404[404 Not Found]
+    DBResult -->|Duplicate key| Return400B[400 Duplicate]
+    DBResult -->|DB error| Return500[500 Internal Error]
+    DBResult -->|Success| BuildResponse[Build ApiResponse\nSuccessResponse helper]
 
-    HashPassword --> InsertUser[Insert user\nto MongoDB]
-    VerifyPassword --> PasswordMatch{Match?}
-    PasswordMatch -->|No| Return401D[Return 401\nInvalid credentials]
-    PasswordMatch -->|Yes| GenerateJWT[Generate JWT\nwith user_id claim]
+    BuildResponse --> Return2xx[200/201 JSON]
 
-    InsertUser --> GenerateJWT
-    GenerateJWT --> ReturnAuthResponse[Return 200/201\n{ user, token }]
+    Return403 --> LogResponse[Log response]
+    Return429 --> LogResponse
+    Return401A --> LogResponse
+    Return401B --> LogResponse
+    Return401C --> LogResponse
+    Return400 --> LogResponse
+    Return403B --> LogResponse
+    Return404 --> LogResponse
+    Return400B --> LogResponse
+    Return500 --> LogResponse
+    Return2xx --> LogResponse
 
-    Return403 --> End([🔴 Response sent])
-    Return401A --> End
-    Return401B --> End
-    Return401C --> End
-    Return400 --> End
-    Return403B --> End
-    Return404 --> End
-    Return500 --> End
-    Return2xx --> End
-    Return401D --> End
-    ReturnAuthResponse --> End
+    LogResponse --> End([🔴 Response sent])
 ```
 
 ---
@@ -231,39 +270,58 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-    subgraph UserDoc["👤 User Document"]
-        U_id["id: UUID"]
-        U_email["email: string (unique)"]
+    subgraph UserDoc["👤 User"]
+        U_id["_id: ObjectID"]
+        U_email["email: string (unique idx)"]
         U_name["name: string"]
-        U_orgs["organizations: string[]"]
+        U_password["password: bcrypt hash"]
+        U_orgs["organizations: []ObjectID"]
         U_verified["email_verified: bool"]
+        U_pic["profile_picture?: string"]
     end
 
-    subgraph OrgDoc["🏢 Organization Document"]
-        O_id["id: UUID"]
+    subgraph OrgDoc["🏢 Organization"]
+        O_id["_id: ObjectID"]
         O_name["name: string"]
-        O_owner["owner_id → User.id"]
-        O_members["members: [{user_id, role, joined_at}]"]
+        O_desc["description: string"]
+        O_owner["owner_id: ObjectID → User"]
+        O_members["members: []{\nuser_id: ObjectID\nrole: owner|admin|member\njoined_at: time\n} (idx on user_id)"]
     end
 
-    subgraph ProjectDoc["📁 Project Document"]
-        P_id["id: UUID"]
+    subgraph ProjectDoc["📁 Project"]
+        P_id["_id: ObjectID"]
         P_name["name: string"]
-        P_org["organization_id → Org.id"]
-        P_owner["owner_id → User.id"]
-        P_members["members: [User.id]"]
+        P_desc["description: string"]
+        P_org["organization_id: ObjectID → Org (idx)"]
+        P_owner["owner_id: ObjectID → User"]
+        P_members["members: []ObjectID (idx)"]
         P_status["status: active|completed|archived"]
+        P_dates["start_date?, end_date?"]
     end
 
-    subgraph TaskDoc["✅ Task Document"]
-        T_id["id: UUID"]
+    subgraph TaskDoc["✅ Task"]
+        T_id["_id: ObjectID"]
         T_title["title: string"]
-        T_project["project_id → Project.id"]
-        T_creator["created_by → User.id"]
-        T_assigned["assigned_to: [User.id]"]
-        T_status["status: todo|in_progress|in_review|done|blocked"]
+        T_desc["description: string"]
+        T_project["project_id: ObjectID → Project (idx)"]
+        T_creator["created_by: ObjectID → User"]
+        T_assigned["assigned_to: []ObjectID (idx)"]
+        T_status["status: todo|in_progress|in_review|done|blocked (idx)"]
         T_priority["priority: low|medium|high|critical"]
-        T_tags["tags: string[]"]
+        T_tags["tags: []string"]
+        T_dates["due_date?, completed_at?"]
+    end
+
+    subgraph InvDoc["📨 Invitation"]
+        I_id["_id: ObjectID"]
+        I_type["type: organization|project"]
+        I_email["email: string"]
+        I_inviter["invited_by: ObjectID → User"]
+        I_resource["resource_id: ObjectID → Org|Project"]
+        I_role["role: OrganizationRole"]
+        I_status["status: pending|accepted|declined|expired|revoked"]
+        I_token["token: 64-char hex (unique)"]
+        I_expires["expires_at: time (7 days)"]
     end
 
     %% Relationships
@@ -273,17 +331,23 @@ flowchart LR
     UserDoc -->|"member of (M:M)"| ProjectDoc
     UserDoc -->|"creates (1:M)"| TaskDoc
     UserDoc -->|"assigned to (M:M)"| TaskDoc
+    UserDoc -->|"invites (1:M)"| InvDoc
 
     OrgDoc -->|"contains (1:M)"| ProjectDoc
+    OrgDoc -->|"has invitations (1:M)"| InvDoc
+
     ProjectDoc -->|"contains (1:M)"| TaskDoc
+    ProjectDoc -->|"has invitations (1:M)"| InvDoc
 
     classDef userStyle fill:#1e3a5f,stroke:#4a9eff,color:#fff
     classDef orgStyle fill:#3a2a1a,stroke:#ffaa4a,color:#fff
     classDef projStyle fill:#1a3a3a,stroke:#4affff,color:#fff
     classDef taskStyle fill:#3a1a1a,stroke:#ff6b6b,color:#fff
+    classDef invStyle fill:#2a1a3a,stroke:#aa6bff,color:#fff
 
-    class U_id,U_email,U_name,U_orgs,U_verified userStyle
-    class O_id,O_name,O_owner,O_members orgStyle
-    class P_id,P_name,P_org,P_owner,P_members,P_status projStyle
-    class T_id,T_title,T_project,T_creator,T_assigned,T_status,T_priority,T_tags taskStyle
+    class U_id,U_email,U_name,U_password,U_orgs,U_verified,U_pic userStyle
+    class O_id,O_name,O_desc,O_owner,O_members orgStyle
+    class P_id,P_name,P_desc,P_org,P_owner,P_members,P_status,P_dates projStyle
+    class T_id,T_title,T_desc,T_project,T_creator,T_assigned,T_status,T_priority,T_tags,T_dates taskStyle
+    class I_id,I_type,I_email,I_inviter,I_resource,I_role,I_status,I_token,I_expires invStyle
 ```

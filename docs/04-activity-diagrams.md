@@ -10,40 +10,39 @@
 flowchart TD
     Start([🟢 User Opens App]) --> CheckToken{Token in\nlocalStorage?}
 
-    CheckToken -->|Yes| ValidateToken{Token\nvalid?}
+    CheckToken -->|Yes| ValidateToken{Zustand\nisAuthenticated?}
     CheckToken -->|No| ShowLogin[Show Login Page]
 
-    ValidateToken -->|Valid| LoadDashboard[Load Dashboard]
-    ValidateToken -->|Expired / Invalid| ClearToken[Clear localStorage\n+ Zustand state]
-    ClearToken --> ShowLogin
+    ValidateToken -->|true| LoadDashboard[Load Dashboard]
+    ValidateToken -->|false| ShowLogin
 
     ShowLogin --> UserChoice{User Action}
     UserChoice -->|Login| FillLoginForm[Fill Email + Password]
-    UserChoice -->|Register| FillRegisterForm[Fill Name + Email + Password]
+    UserChoice -->|Register| FillRegisterForm[Fill Name + Email + Password\nmin 8 char password]
 
-    FillLoginForm --> ValidateLoginForm{Zod\nValidation?}
-    ValidateLoginForm -->|Fail| ShowLoginErrors[Show field errors]
+    FillLoginForm --> ValidateLogin{Zod\nValidation?}
+    ValidateLogin -->|Fail| ShowLoginErrors[Show field errors]
     ShowLoginErrors --> FillLoginForm
-    ValidateLoginForm -->|Pass| PostLogin[POST /auth/login]
+    ValidateLogin -->|Pass| PostLogin[POST /api/v1/auth/login]
 
-    FillRegisterForm --> ValidateRegisterForm{Zod\nValidation?}
-    ValidateRegisterForm -->|Fail| ShowRegisterErrors[Show field errors]
+    FillRegisterForm --> ValidateRegister{Zod\nValidation?}
+    ValidateRegister -->|Fail| ShowRegisterErrors[Show field errors]
     ShowRegisterErrors --> FillRegisterForm
-    ValidateRegisterForm -->|Pass| PostRegister[POST /auth/register]
+    ValidateRegister -->|Pass| PostRegister[POST /api/v1/auth/register]
 
-    PostLogin --> LoginResponse{API\nResponse?}
-    LoginResponse -->|200 OK| StoreAuthLogin[Store user + token\nin Zustand + localStorage]
-    LoginResponse -->|401 / Error| ShowLoginError[Toast: Login failed]
+    PostLogin --> LoginResp{API Response?}
+    LoginResp -->|200 OK| StoreAuth[setAuth(user, token)\nZustand + localStorage]
+    LoginResp -->|401| ShowLoginError[Toast: Invalid credentials]
+    LoginResp -->|429| ShowRateError[Toast: Rate limit exceeded]
     ShowLoginError --> FillLoginForm
+    ShowRateError --> FillLoginForm
 
-    PostRegister --> RegisterResponse{API\nResponse?}
-    RegisterResponse -->|201 Created| StoreAuthRegister[Store user + token\nin Zustand + localStorage]
-    RegisterResponse -->|400 / Error| ShowRegisterError[Toast: Registration failed]
+    PostRegister --> RegisterResp{API Response?}
+    RegisterResp -->|201 Created| StoreAuth
+    RegisterResp -->|400 Email exists| ShowRegisterError[Toast: Email already exists]
     ShowRegisterError --> FillRegisterForm
 
-    StoreAuthLogin --> LoadDashboard
-    StoreAuthRegister --> LoadDashboard
-
+    StoreAuth --> LoadDashboard
     LoadDashboard --> End([🔴 User on Dashboard])
 ```
 
@@ -53,148 +52,175 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    Start([🟢 Task Created]) --> StatusTodo[Status: TODO]
+    Start([🟢 Task Created\nstatus=todo]) --> Assign[Assign to Users\nSet Priority + Due Date + Tags]
 
-    StatusTodo --> AssignUser[Assign to User]
-    AssignUser --> SetPriority[Set Priority\nlow / medium / high / critical]
-    SetPriority --> SetDueDate[Set Due Date\n& Tags]
+    Assign --> StartWork{User starts\nworking?}
+    StartWork -->|Yes| InProgress[status: IN_PROGRESS]
+    StartWork -->|Waiting| WaitLoop[Wait for assignment]
+    WaitLoop --> StartWork
 
-    SetDueDate --> StartWork{User starts\nworking?}
-    StartWork -->|Yes| StatusInProgress[Status: IN_PROGRESS]
-    StartWork -->|No| WaitAssignment[Wait for assignment]
-    WaitAssignment --> StartWork
-
-    StatusInProgress --> Blocker{Blocker\nencountered?}
-    Blocker -->|Yes| StatusBlocked[Status: BLOCKED]
+    InProgress --> Blocker{Blocker\nencountered?}
+    Blocker -->|Yes| Blocked[status: BLOCKED]
     Blocker -->|No| SubmitReview[Submit for Review]
 
-    StatusBlocked --> BlockerResolved{Blocker\nresolved?}
-    BlockerResolved -->|Yes| StatusInProgress
-    BlockerResolved -->|No| StatusBlocked
+    Blocked --> BlockerFixed{Blocker\nresolved?}
+    BlockerFixed -->|Yes| InProgress
+    BlockerFixed -->|No| Blocked
 
-    SubmitReview --> StatusInReview[Status: IN_REVIEW]
+    SubmitReview --> InReview[status: IN_REVIEW]
 
-    StatusInReview --> ReviewResult{Review\nOutcome?}
-    ReviewResult -->|Changes needed| StatusInProgress
-    ReviewResult -->|Approved| StatusDone[Status: DONE]
+    InReview --> ReviewResult{Review\nOutcome?}
+    ReviewResult -->|Changes needed| InProgress
+    ReviewResult -->|Approved| Done[status: DONE]
 
-    StatusDone --> RecordCompletion[Record completed_at\ntimestamp]
-    RecordCompletion --> NotifyAssignees[Notify assigned users]
-    NotifyAssignees --> End([🔴 Task Complete])
+    Done --> SetCompletedAt[Set completed_at = now\nvia UpdateTask service]
+    SetCompletedAt --> NotifyTeam[Notify assigned users\nvia email async]
+    NotifyTeam --> End([🔴 Task Complete])
 
-    StatusTodo --> DeleteTask{Delete\ntask?}
-    StatusInProgress --> DeleteTask
-    StatusBlocked --> DeleteTask
-    DeleteTask -->|Yes| ConfirmDelete[Confirm Dialog]
-    ConfirmDelete --> RemoveTask[DELETE /tasks/:id]
-    RemoveTask --> InvalidateCache[Invalidate React Query cache]
+    InProgress --> DeleteCheck{Creator\ndeletes task?}
+    InReview --> DeleteCheck
+    Blocked --> DeleteCheck
+    Done --> DeleteCheck
+    DeleteCheck -->|Yes| ConfirmDel[ConfirmDialog shown]
+    ConfirmDel --> DelTask[DELETE /api/v1/tasks/:id\nOnly creator allowed]
+    DelTask --> InvalidateCache[Invalidate React Query cache]
     InvalidateCache --> End2([🔴 Task Deleted])
 ```
 
 ---
 
-## 3. Organization & Project Setup Activity
+## 3. Invitation Lifecycle Activity
 
 ```mermaid
 flowchart TD
-    Start([🟢 Authenticated User]) --> GoToOrgs[Navigate to Organizations]
+    Start([🟢 Admin sends invitation]) --> CreateInv[POST /organizations/:id/invitations\n{ email, role }]
 
-    GoToOrgs --> HasOrgs{Has existing\norganizations?}
-    HasOrgs -->|Yes| ViewOrgList[View Organization List]
-    HasOrgs -->|No| CreateOrgPrompt[Show Empty State\n+ Create button]
+    CreateInv --> CheckExisting{Pending invitation\nalready exists?}
+    CheckExisting -->|Yes| ReturnExisting[Return existing invitation\nidempotent]
+    CheckExisting -->|No| GenToken[Generate 64-char hex token\ncrypto/rand]
 
-    CreateOrgPrompt --> OpenOrgForm[Open OrgFormDialog]
-    ViewOrgList --> OpenOrgForm
+    GenToken --> SaveInv[Save invitation\nstatus=pending\nexpires in 7 days]
+    SaveInv --> SendEmail[Send invitation email\nasync goroutine]
+    ReturnExisting --> SendEmail
 
-    OpenOrgForm --> FillOrgForm[Fill Name + Description]
-    FillOrgForm --> ValidateOrg{Valid?}
-    ValidateOrg -->|No| ShowOrgErrors[Show errors]
-    ShowOrgErrors --> FillOrgForm
-    ValidateOrg -->|Yes| PostOrg[POST /organizations]
+    SendEmail --> InviteeAction{Invitee\naction?}
 
-    PostOrg --> OrgCreated[Organization Created\nUser becomes Owner]
-    OrgCreated --> InviteMembers{Invite\nmembers?}
+    InviteeAction -->|Accept| CheckExpiry{Invitation\nexpired?}
+    InviteeAction -->|Decline| DeclineInv[POST /invitations/decline\nstatus=declined]
+    InviteeAction -->|Ignore| ExpireCheck{7 days\npassed?}
 
-    InviteMembers -->|Yes| OpenInviteDialog[Open InviteDialog]
-    OpenInviteDialog --> EnterEmail[Enter email + select role]
-    EnterEmail --> PostInvite[POST /organizations/:id/invite]
-    PostInvite --> InviteSent[Email sent to invitee]
-    InviteSent --> InviteMore{Invite\nmore?}
-    InviteMore -->|Yes| OpenInviteDialog
-    InviteMore -->|No| GoToProjects
+    CheckExpiry -->|Yes| RejectAccept[400 Invitation no longer valid]
+    CheckExpiry -->|No| CheckEmail{Email matches\nlogged-in user?}
 
-    InviteMembers -->|No| GoToProjects[Navigate to Projects]
+    CheckEmail -->|No| RejectEmail[403 Wrong email address]
+    CheckEmail -->|Yes| AddToResource[Add user to org/project\nAddMember service]
 
-    GoToProjects --> HasProjects{Has projects\nin org?}
-    HasProjects -->|Yes| ViewProjectList[View Project List]
-    HasProjects -->|No| CreateProjectPrompt[Show Empty State\n+ Create button]
+    AddToResource --> UpdateStatus[UpdateStatus → accepted]
+    UpdateStatus --> End([🔴 User joined resource])
 
-    CreateProjectPrompt --> OpenProjectForm[Open ProjectFormDialog]
-    ViewProjectList --> OpenProjectForm
+    DeclineInv --> End2([🔴 Invitation declined])
 
-    OpenProjectForm --> FillProjectForm[Fill Name, Description,\nStatus, Dates]
-    FillProjectForm --> ValidateProject{Valid?}
-    ValidateProject -->|No| ShowProjectErrors[Show errors]
-    ShowProjectErrors --> FillProjectForm
-    ValidateProject -->|Yes| PostProject[POST /projects]
+    ExpireCheck -->|Yes| MarkExpired[ExpireOldInvitations\nstatus=expired]
+    MarkExpired --> End3([🔴 Invitation expired])
+    ExpireCheck -->|No| InviteeAction
 
-    PostProject --> ProjectCreated[Project Created\nLinked to Organization]
-    ProjectCreated --> AddProjectMembers{Add project\nmembers?}
-
-    AddProjectMembers -->|Yes| PostMember[POST /projects/:id/members]
-    PostMember --> MemberAdded[Member added to project]
-    MemberAdded --> AddProjectMembers
-    AddProjectMembers -->|No| GoToTasks[Navigate to Tasks]
-
-    GoToTasks --> End([🔴 Ready to create Tasks])
+    Start --> AdminRevoke{Admin\nrevokes?}
+    AdminRevoke -->|Yes| RevokeInv[DELETE /organizations/:id/invitations/:invId\nstatus=revoked]
+    RevokeInv --> End4([🔴 Invitation revoked])
 ```
 
 ---
 
-## 4. Dashboard Load Activity
+## 4. Organization & Project Setup Activity
 
 ```mermaid
 flowchart TD
-    Start([🟢 User navigates to /dashboard]) --> CheckAuth{isAuthenticated\nin Zustand?}
+    Start([🟢 Authenticated User]) --> GoOrgs[Navigate to /organizations]
 
-    CheckAuth -->|No| RedirectLogin[Redirect to /login]
-    CheckAuth -->|Yes| InitParallelFetch
+    GoOrgs --> HasOrgs{Has orgs?}
+    HasOrgs -->|Yes| ViewOrgs[View org list]
+    HasOrgs -->|No| EmptyOrgs[Show EmptyState\n+ Create button]
 
-    InitParallelFetch --> ParallelFetch["⚡ Parallel React Query Fetches"]
+    EmptyOrgs --> OpenOrgForm[Open OrgFormDialog]
+    ViewOrgs --> OpenOrgForm
 
-    ParallelFetch --> FetchOrgs[GET /organizations]
-    ParallelFetch --> FetchProjects[GET /projects]
-    ParallelFetch --> FetchTasks[GET /tasks]
-    ParallelFetch --> FetchProfile[GET /profile]
+    OpenOrgForm --> FillOrg[Fill Name + Description]
+    FillOrg --> ValidOrg{Valid?}
+    ValidOrg -->|No| OrgErrors[Show errors]
+    OrgErrors --> FillOrg
+    ValidOrg -->|Yes| PostOrg[POST /api/v1/organizations]
 
-    FetchOrgs --> OrgsCached{In\ncache?}
-    OrgsCached -->|Yes, fresh| UseOrgCache[Use cached data]
-    OrgsCached -->|No / stale| FetchOrgsAPI[Fetch from API]
-    FetchOrgsAPI --> StoreOrgsCache[Store in React Query cache\n5 min stale time]
+    PostOrg --> OrgCreated[Org created\nUser = Owner\nAdded to user.organizations]
 
-    FetchProjects --> ProjectsCached{In\ncache?}
-    ProjectsCached -->|Yes, fresh| UseProjectCache[Use cached data]
-    ProjectsCached -->|No / stale| FetchProjectsAPI[Fetch from API]
-    FetchProjectsAPI --> StoreProjectsCache[Store in React Query cache]
+    OrgCreated --> InviteMembers{Invite\nmembers?}
+    InviteMembers -->|Yes| SendInvite[POST /organizations/:id/invitations\n{ email, role }]
+    SendInvite --> EmailSent[Invitation email sent async]
+    EmailSent --> MoreInvites{More\ninvites?}
+    MoreInvites -->|Yes| SendInvite
+    MoreInvites -->|No| GoProjects
 
-    FetchTasks --> TasksCached{In\ncache?}
-    TasksCached -->|Yes, fresh| UseTaskCache[Use cached data]
-    TasksCached -->|No / stale| FetchTasksAPI[Fetch from API]
-    FetchTasksAPI --> StoreTasksCache[Store in React Query cache]
+    InviteMembers -->|No| GoProjects[Navigate to /projects]
 
-    FetchProfile --> ProfileCached{In\ncache?}
-    ProfileCached -->|Yes, fresh| UseProfileCache[Use cached data]
-    ProfileCached -->|No / stale| FetchProfileAPI[Fetch from API]
-    FetchProfileAPI --> StoreProfileCache[Store in React Query cache]
+    GoProjects --> HasProjects{Has projects?}
+    HasProjects -->|Yes| ViewProjects[View project list]
+    HasProjects -->|No| EmptyProjects[Show EmptyState\n+ Create button]
 
-    UseOrgCache --> RenderStats
-    StoreOrgsCache --> RenderStats
-    UseProjectCache --> RenderStats
-    StoreProjectsCache --> RenderStats
-    UseTaskCache --> RenderStats
-    StoreTasksCache --> RenderStats
-    UseProfileCache --> RenderStats
-    StoreProfileCache --> RenderStats
+    EmptyProjects --> OpenProjForm[Open ProjectFormDialog]
+    ViewProjects --> OpenProjForm
 
-    RenderStats[Render Dashboard\n- Org count\n- Project count\n- Task count\n- Recent tasks\n- Recent projects] --> End([🔴 Dashboard Ready])
+    OpenProjForm --> FillProj[Fill Name, Description\nStatus, Start/End Dates]
+    FillProj --> ValidProj{Valid?}
+    ValidProj -->|No| ProjErrors[Show errors]
+    ProjErrors --> FillProj
+    ValidProj -->|Yes| CheckOrgAccess[Verify org membership\nCheckUserAccess]
+
+    CheckOrgAccess --> AccessOK{Access\ngranted?}
+    AccessOK -->|No| ForbiddenError[403 Access denied]
+    AccessOK -->|Yes| PostProj[POST /api/v1/projects]
+
+    PostProj --> ProjCreated[Project created\nUser = Owner + Member]
+    ProjCreated --> GoTasks[Navigate to /tasks]
+    GoTasks --> End([🔴 Ready to create Tasks])
+```
+
+---
+
+## 5. Rate Limiter Activity
+
+```mermaid
+flowchart TD
+    Start([🟢 HTTP Request arrives]) --> GetIP[Extract client IP\nc.ClientIP]
+
+    GetIP --> LockMutex[Acquire write lock\nsync.RWMutex]
+
+    LockMutex --> VisitorExists{IP in\nvisitors map?}
+
+    VisitorExists -->|No| CreateVisitor[Create visitor\ncount=1, lastSeen=now]
+    CreateVisitor --> UnlockAllow[Release lock]
+    UnlockAllow --> Allow[c.Next() → proceed]
+
+    VisitorExists -->|Yes| CheckWindow{Time since\nlastSeen > window?}
+
+    CheckWindow -->|Yes, window expired| ResetVisitor[Reset count=1\nlastSeen=now]
+    ResetVisitor --> UnlockAllow
+
+    CheckWindow -->|No, within window| CheckLimit{count >=\nlimit (100)?}
+
+    CheckLimit -->|Yes| UnlockDeny[Release lock]
+    UnlockDeny --> Deny[429 Rate limit exceeded\nc.Abort]
+
+    CheckLimit -->|No| IncrCount[count++\nlastSeen=now]
+    IncrCount --> UnlockAllow
+
+    Allow --> End([🔴 Request processed])
+    Deny --> End2([🔴 Request rejected])
+
+    subgraph Cleanup["Background Cleanup Goroutine (every 1 min)"]
+        CleanStart([⏰ Tick]) --> ScanVisitors[Scan all visitors]
+        ScanVisitors --> OldVisitor{lastSeen >\nwindow ago?}
+        OldVisitor -->|Yes| DeleteVisitor[Delete from map]
+        OldVisitor -->|No| KeepVisitor[Keep]
+        DeleteVisitor --> CleanEnd([Done])
+        KeepVisitor --> CleanEnd
+    end
 ```

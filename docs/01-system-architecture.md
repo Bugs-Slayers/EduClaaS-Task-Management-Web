@@ -1,17 +1,17 @@
 # System Architecture Diagram
 
-> High-level view of the EduClaaS Task Management system — how all layers and services connect.
+> Complete architecture of the EduClaaS TaskFlow system — all layers, services, and data flows.
 
 ```mermaid
 graph TB
     subgraph Client["🖥️ Client Layer (Browser)"]
         direction TB
         UI["React 19 + TypeScript\nVite + Tailwind CSS + Shadcn UI"]
-        Router["React Router v7\nClient-side Routing"]
-        ZustandStore["Zustand Store\nAuth State (user, token)"]
-        ReactQuery["React Query\nServer State Cache"]
-        AxiosClient["Axios HTTP Client\nJWT Interceptor"]
-        LocalStorage["localStorage\nToken Persistence"]
+        Router["React Router v7\nClient-side Routing\nAuth Guards"]
+        ZustandStore["Zustand Store\nAuth State (user, token, isAuthenticated)"]
+        ReactQuery["React Query v4\nServer State Cache\n5-min stale time"]
+        AxiosClient["Axios HTTP Client\nRequest Interceptor: attach JWT\nResponse Interceptor: 401 → logout"]
+        LocalStorage["localStorage\nToken + User Persistence"]
 
         UI --> Router
         UI --> ZustandStore
@@ -20,88 +20,130 @@ graph TB
         ZustandStore <--> LocalStorage
     end
 
-    subgraph Frontend_Pages["📄 Frontend Pages"]
+    subgraph FrontendPages["📄 Frontend Pages"]
         direction LR
-        AuthPages["Auth Pages\nLogin / Register"]
-        Dashboard["Dashboard\nOverview & Stats"]
-        OrgPages["Organizations\nList / Detail / Invite"]
-        ProjectPages["Projects\nList / Detail"]
-        TaskPages["Tasks\nList / Detail"]
+        AuthPages["Auth\nLogin / Register"]
+        Dashboard["Dashboard\nStats + Recent"]
+        OrgPages["Organizations\nList / Detail / Members / Invite"]
+        ProjectPages["Projects\nList / Detail / Members"]
+        TaskPages["Tasks\nList / Detail / Assign"]
         ProfilePage["Profile\nUser Settings"]
     end
 
-    subgraph Backend["⚙️ Backend Layer (Go + Gin)"]
+    subgraph Backend["⚙️ Backend Layer (Go 1.26 + Gin)"]
         direction TB
-        GinServer["Gin HTTP Server\nPort :8080"]
-        CORSMiddleware["CORS Middleware\nAllows localhost:5173"]
-        JWTMiddleware["JWT Auth Middleware\nBearer Token Validation"]
 
-        subgraph APIRoutes["API Routes /api/v1"]
-            AuthRoutes["Auth Routes\nPOST /auth/register\nPOST /auth/login\nGET  /profile"]
-            OrgRoutes["Organization Routes\nGET/POST /organizations\nGET/PUT/DELETE /organizations/:id\nPOST /organizations/:id/invite"]
-            ProjectRoutes["Project Routes\nGET/POST /projects\nGET/PUT/DELETE /projects/:id\nPOST /projects/:id/members"]
-            TaskRoutes["Task Routes\nGET/POST /tasks\nGET/PUT/DELETE /tasks/:id"]
+        subgraph Middleware["Middleware Stack"]
+            CORS["CORS\nAllows FRONTEND_URL"]
+            Logger["Logger\nMethod + Path + IP + Status + Duration"]
+            RateLimit["Rate Limiter\n100 req/min per IP"]
+            JWTMw["JWT Auth Middleware\nBearer token → user_id in context"]
         end
 
-        GinServer --> CORSMiddleware
-        CORSMiddleware --> JWTMiddleware
-        JWTMiddleware --> APIRoutes
+        subgraph PublicRoutes["Public Routes"]
+            AuthR["POST /api/v1/auth/register\nPOST /api/v1/auth/login"]
+            HealthR["GET /health\nGET /"]
+        end
+
+        subgraph ProtectedRoutes["Protected Routes (JWT required)"]
+            ProfileR["GET /api/v1/profile"]
+            InvR["GET /invitations/my\nPOST /invitations/accept\nPOST /invitations/decline"]
+            OrgR["CRUD /organizations\n+ /invitations\n+ /members"]
+            ProjR["CRUD /projects\n+ /invitations\n+ /members"]
+            TaskR["CRUD /tasks\n+ /assign"]
+        end
+
+        subgraph Services["Services (Business Logic)"]
+            UserSvc["UserService\nCreateUser, ValidateCredentials\nGetByID/Email, AddOrgToUser"]
+            OrgSvc["OrganizationService\nCRUD, AddMember, RemoveMember\nCheckUserAccess, CheckUserRole"]
+            ProjSvc["ProjectService\nCRUD, AddMember, RemoveMember\nCheckUserAccess"]
+            TaskSvc["TaskService\nCRUD, AssignUsers, UnassignUser\nGetByStatus, GetByPriority"]
+            InvSvc["InvitationService\nCreateInvitation, GetByToken\nUpdateStatus, Expire, Revoke"]
+        end
+
+        subgraph Helpers["Helpers"]
+            JWT["JWT Helper\nGenerateJWT (24h)\nValidateJWT"]
+            PWD["Password Helper\nbcrypt Hash + Check"]
+            Email["Email Service\nWelcome, Invitation\nProject Invite, Task Assignment"]
+            Resp["Response Helper\nSuccessResponse\nErrorResponse"]
+        end
+
+        CORS --> Logger --> RateLimit
+        RateLimit --> PublicRoutes
+        RateLimit --> JWTMw --> ProtectedRoutes
+        ProtectedRoutes --> Services
+        Services --> Helpers
     end
 
     subgraph DataLayer["🗄️ Data Layer"]
-        MongoDB[("MongoDB\nPrimary Database\nPort 27017")]
+        MongoDB[("MongoDB\ntaskflow DB\nPort 27017")]
         Redis[("Redis\nCache / Sessions\nPort 6379")]
 
-        subgraph Collections["MongoDB Collections"]
-            UsersCol["users\n{id, email, name, password,\norganizations[], email_verified}"]
-            OrgsCol["organizations\n{id, name, description,\nowner_id, members[]}"]
-            ProjectsCol["projects\n{id, name, org_id,\nowner_id, members[], status}"]
-            TasksCol["tasks\n{id, title, project_id,\nassigned_to[], status, priority}"]
+        subgraph Collections["Collections + Indexes"]
+            UsersCol["users\nemail (unique idx)"]
+            OrgsCol["organizations\nmembers.user_id (idx)"]
+            ProjectsCol["projects\norganization_id (idx)\nmembers (idx)"]
+            TasksCol["tasks\nproject_id (idx)\nassigned_to (idx)\nstatus (idx)"]
+            InvCol["invitations\ntoken, email, resource_id"]
         end
 
         MongoDB --> Collections
     end
 
     subgraph EmailService["📧 Email Service"]
-        MailHog["MailHog / SMTP\nPort 8025\nMember Invitations"]
+        MailHog["MailHog / SMTP\nPort 1025 (SMTP)\nPort 8025 (Web UI)\nAsync goroutines"]
     end
 
-    %% Client to Backend
-    AxiosClient -->|"HTTPS REST API\nBearer JWT"| GinServer
+    %% Client ↔ Backend
+    AxiosClient -->|"HTTPS REST\nBearer JWT"| Backend
 
-    %% Pages to Client Layer
-    Frontend_Pages --> UI
+    %% Pages → Client
+    FrontendPages --> UI
 
-    %% Backend to Data
-    APIRoutes -->|"CRUD Operations"| MongoDB
-    APIRoutes -->|"Cache / Session"| Redis
+    %% Backend → Data
+    Services -->|"CRUD"| MongoDB
+    Services -->|"Cache"| Redis
 
-    %% Backend to Email
-    OrgRoutes -->|"Invite Email"| MailHog
+    %% Backend → Email (async)
+    Email -->|"Async goroutine"| MailHog
 
-    %% Styling
     classDef clientBox fill:#1e3a5f,stroke:#4a9eff,color:#fff
     classDef backendBox fill:#1a3a2a,stroke:#4aff8a,color:#fff
     classDef dataBox fill:#3a1a1a,stroke:#ff6b6b,color:#fff
     classDef emailBox fill:#3a2a1a,stroke:#ffaa4a,color:#fff
     classDef pageBox fill:#2a1a3a,stroke:#aa6bff,color:#fff
+    classDef mwBox fill:#1a2a3a,stroke:#4affff,color:#fff
 
     class UI,Router,ZustandStore,ReactQuery,AxiosClient,LocalStorage clientBox
-    class GinServer,CORSMiddleware,JWTMiddleware,AuthRoutes,OrgRoutes,ProjectRoutes,TaskRoutes backendBox
-    class MongoDB,Redis,UsersCol,OrgsCol,ProjectsCol,TasksCol dataBox
+    class CORS,Logger,RateLimit,JWTMw mwBox
+    class UserSvc,OrgSvc,ProjSvc,TaskSvc,InvSvc backendBox
+    class JWT,PWD,Email,Resp backendBox
+    class MongoDB,Redis,UsersCol,OrgsCol,ProjectsCol,TasksCol,InvCol dataBox
     class MailHog emailBox
     class AuthPages,Dashboard,OrgPages,ProjectPages,TaskPages,ProfilePage pageBox
 ```
 
-## Key Architectural Decisions
+## Architecture Decisions
 
 | Concern | Solution | Rationale |
 |---|---|---|
-| Client state | Zustand | Lightweight, minimal boilerplate for auth state |
-| Server state | React Query | Automatic caching, background refetch, cache invalidation |
-| Authentication | JWT (Bearer token) | Stateless, scalable, stored in localStorage |
-| API communication | Axios + interceptors | Centralized token injection and 401 handling |
+| Client state | Zustand + persist | Lightweight auth state with localStorage persistence |
+| Server state | React Query | Auto-caching, background refetch, cache invalidation |
+| Auth | JWT (24h expiry) | Stateless, scalable; stored in localStorage |
+| API layer | Axios + interceptors | Centralized token injection and 401 auto-logout |
 | Database | MongoDB | Flexible document model for nested members/tags |
-| Cache | Redis | Fast session/cache layer alongside MongoDB |
-| Backend framework | Go + Gin | High performance, low latency HTTP server |
-| Frontend framework | React + Vite | Fast HMR, TypeScript-first, modern tooling |
+| Cache | Redis | Fast session/cache layer (initialized, ready to use) |
+| Email | gomail + MailHog | Async goroutines; MailHog for local dev |
+| Rate limiting | Per-IP in-memory | 100 req/min, auto-cleanup goroutine |
+| Backend | Go + Gin | High-performance, low-latency HTTP |
+| Frontend | React + Vite | Fast HMR, TypeScript-first |
+
+## Layer Responsibilities
+
+```
+Handler  → Parse request, validate input, check auth/permissions, call service
+Service  → Business logic, DB operations, orchestration
+Model    → Data structures, BSON/JSON tags, request/response DTOs
+Helper   → JWT, bcrypt, email, response formatting
+Middleware → CORS, logging, rate limiting, JWT validation
+```
