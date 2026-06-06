@@ -48,7 +48,8 @@ function DropdownMenuContent({
         style={{
           background: 'var(--bg-elevated)',
           borderColor: 'var(--border-strong)',
-          color: 'var(--text-primary)'
+          color: 'var(--text-primary)',
+          boxShadow: 'var(--shadow-neon)',
         }}
         {...props}
       />
@@ -79,13 +80,22 @@ function DropdownMenuItem({
       data-inset={inset}
       data-variant={variant}
       className={cn(
-        "group/dropdown-menu-item relative flex cursor-default items-center gap-2 px-3 py-2.5 text-sm outline-hidden select-none transition-colors data-inset:pl-8 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        "hover:bg-[var(--bg-secondary)] focus:bg-[var(--bg-secondary)]",
-        "data-[variant=destructive]:text-[var(--accent-neon)] data-[variant=destructive]:hover:bg-[var(--bg-secondary)]",
+        "group/dropdown-menu-item relative flex cursor-default items-center gap-2 px-3 py-2.5 text-sm font-bold uppercase tracking-wide outline-hidden select-none data-inset:pl-8 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "hover:bg-[var(--bg-secondary)] hover:pl-5 focus:bg-[var(--bg-secondary)] focus:pl-5",
+        "data-[variant=destructive]:text-[var(--accent-neon)] data-[variant=destructive]:hover:bg-[var(--bg-secondary)] data-[variant=destructive]:focus:bg-[var(--bg-secondary)]",
+        "transition-all",
         className
       )}
       style={{
-        color: variant === 'destructive' ? 'var(--accent-neon)' : 'var(--text-primary)'
+        fontFamily: 'var(--font-display)',
+        color: variant === 'destructive' ? 'var(--accent-neon)' : 'var(--text-primary)',
+        borderLeft: '3px solid transparent',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.borderLeftColor = variant === 'destructive' ? 'var(--accent-neon)' : 'var(--accent-electric)'
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderLeftColor = 'transparent'
       }}
       {...props}
     />

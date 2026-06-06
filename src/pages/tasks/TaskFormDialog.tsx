@@ -54,7 +54,7 @@ export function TaskFormDialog({ open, onOpenChange, onSubmit, loading, defaultV
         <DialogHeader>
           <DialogTitle>{mode === 'create' ? 'Create Task' : 'Edit Task'}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="w-full space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="task-title">Title *</Label>
             <Input id="task-title" placeholder="Design homepage" {...register('title')} aria-invalid={!!errors.title} />

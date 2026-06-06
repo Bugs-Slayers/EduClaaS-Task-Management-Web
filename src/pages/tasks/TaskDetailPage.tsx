@@ -213,7 +213,7 @@ export function TaskDetailPage() {
       </div>
 
       {/* Tags */}
-      {task.tags.length > 0 && (
+      {(task.tags?.length ?? 0) > 0 && (
         <div
           className="p-6 rounded-xl border"
           style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-medium)' }}
@@ -225,7 +225,7 @@ export function TaskDetailPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            {task.tags.map((tag) => (
+            {(task.tags ?? []).map((tag) => (
               <span
                 key={tag}
                 className="px-3 py-1 text-xs font-bold uppercase tracking-wider border"

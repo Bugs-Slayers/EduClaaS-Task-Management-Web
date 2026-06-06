@@ -41,7 +41,7 @@ export function OrgFormDialog({ open, onOpenChange, onSubmit, loading, defaultVa
         <DialogHeader>
           <DialogTitle>{mode === 'create' ? 'Create Organization' : 'Edit Organization'}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="w-full space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="org-name">Name *</Label>
             <Input id="org-name" placeholder="Acme Corp" {...register('name')} aria-invalid={!!errors.name} />

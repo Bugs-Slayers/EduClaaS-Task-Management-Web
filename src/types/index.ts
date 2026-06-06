@@ -191,6 +191,16 @@ export interface ProjectMember {
   is_owner: boolean;
 }
 
+// ─── Dashboard ────────────────────────────────────────────────────────────────
+export interface DashboardStats {
+  organizations_count: number;
+  projects_count: number;
+  tasks_completed: number;
+  tasks_in_progress: number;
+  recent_tasks: Task[];
+  recent_projects: Project[];
+}
+
 // ─── API Response ─────────────────────────────────────────────────────────────
 export interface ApiResponse<T> {
   success: boolean;

@@ -52,7 +52,7 @@ export function ProjectFormDialog({ open, onOpenChange, onSubmit, loading, defau
         <DialogHeader>
           <DialogTitle>{mode === 'create' ? 'Create Project' : 'Edit Project'}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="w-full space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="proj-name">Name *</Label>
             <Input id="proj-name" placeholder="Website Redesign" {...register('name')} aria-invalid={!!errors.name} />
