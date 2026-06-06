@@ -5,7 +5,6 @@
 ---
 
 ## 1. Complete API Request / Response Flowchart
-
 ```mermaid
 flowchart TD
     Start([🟢 Component action]) --> HookCall[Custom Hook\ne.g. useCreateTask]
@@ -51,7 +50,7 @@ flowchart TD
     DBOp --> DBResult{DB\nresult?}
     DBResult -->|Not found| NotFound404[404 Not Found]
     DBResult -->|DB error| Server500[500 Internal Error]
-    DBResult -->|Success| BuildResp[Build ApiResponse\n{ success, data }]
+    DBResult -->|Success| BuildResp[Build ApiResponse\n&#123; success, data &#125;]
 
     BuildResp --> Success2xx[200/201 JSON response]
 
@@ -81,7 +80,6 @@ flowchart TD
     ShowToast --> End([🔴 Action complete])
     ClearAuth --> End2([🔴 Logged out])
 ```
-
 ---
 
 ## 2. Frontend Routing & Auth Guard Flowchart

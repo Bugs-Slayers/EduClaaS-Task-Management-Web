@@ -18,20 +18,20 @@ flowchart TD
 
     ShowLogin --> UserChoice{User Action}
     UserChoice -->|Login| FillLoginForm[Fill Email + Password]
-    UserChoice -->|Register| FillRegisterForm[Fill Name + Email + Password\nmin 8 char password]
+    UserChoice -->|Register| FillRegisterForm["Fill Name + Email + Password<br>min 8 char password"]
 
     FillLoginForm --> ValidateLogin{Zod\nValidation?}
     ValidateLogin -->|Fail| ShowLoginErrors[Show field errors]
     ShowLoginErrors --> FillLoginForm
-    ValidateLogin -->|Pass| PostLogin[POST /api/v1/auth/login]
+    ValidateLogin -->|Pass| PostLogin["POST /api/v1/auth/login"]
 
     FillRegisterForm --> ValidateRegister{Zod\nValidation?}
     ValidateRegister -->|Fail| ShowRegisterErrors[Show field errors]
     ShowRegisterErrors --> FillRegisterForm
-    ValidateRegister -->|Pass| PostRegister[POST /api/v1/auth/register]
+    ValidateRegister -->|Pass| PostRegister["POST /api/v1/auth/register"]
 
     PostLogin --> LoginResp{API Response?}
-    LoginResp -->|200 OK| StoreAuth[setAuth(user, token)\nZustand + localStorage]
+    LoginResp -->|200 OK| StoreAuth["setAuth(user, token)<br>Zustand + localStorage"]
     LoginResp -->|401| ShowLoginError[Toast: Invalid credentials]
     LoginResp -->|429| ShowRateError[Toast: Rate limit exceeded]
     ShowLoginError --> FillLoginForm
@@ -93,39 +93,39 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    Start([🟢 Admin sends invitation]) --> CreateInv[POST /organizations/:id/invitations\n{ email, role }]
+    Start([🟢 Admin sends invitation]) --> CreateInv["POST /organizations/:id/invitations<br>{ email, role }"]
 
-    CreateInv --> CheckExisting{Pending invitation\nalready exists?}
-    CheckExisting -->|Yes| ReturnExisting[Return existing invitation\nidempotent]
-    CheckExisting -->|No| GenToken[Generate 64-char hex token\ncrypto/rand]
+    CreateInv --> CheckExisting{Pending invitation<br>already exists?}
+    CheckExisting -->|Yes| ReturnExisting["Return existing invitation<br>idempotent"]
+    CheckExisting -->|No| GenToken["Generate 64-char hex token<br>crypto/rand"]
 
-    GenToken --> SaveInv[Save invitation\nstatus=pending\nexpires in 7 days]
-    SaveInv --> SendEmail[Send invitation email\nasync goroutine]
+    GenToken --> SaveInv["Save invitation<br>status=pending<br>expires in 7 days"]
+    SaveInv --> SendEmail["Send invitation email<br>async goroutine"]
     ReturnExisting --> SendEmail
 
-    SendEmail --> InviteeAction{Invitee\naction?}
+    SendEmail --> InviteeAction{Invitee<br>action?}
 
-    InviteeAction -->|Accept| CheckExpiry{Invitation\nexpired?}
-    InviteeAction -->|Decline| DeclineInv[POST /invitations/decline\nstatus=declined]
-    InviteeAction -->|Ignore| ExpireCheck{7 days\npassed?}
+    InviteeAction -->|Accept| CheckExpiry{Invitation<br>expired?}
+    InviteeAction -->|Decline| DeclineInv["POST /invitations/decline<br>status=declined"]
+    InviteeAction -->|Ignore| ExpireCheck{7 days<br>passed?}
 
-    CheckExpiry -->|Yes| RejectAccept[400 Invitation no longer valid]
-    CheckExpiry -->|No| CheckEmail{Email matches\nlogged-in user?}
+    CheckExpiry -->|Yes| RejectAccept["400 Invitation no longer valid"]
+    CheckExpiry -->|No| CheckEmail{Email matches<br>logged-in user?}
 
-    CheckEmail -->|No| RejectEmail[403 Wrong email address]
-    CheckEmail -->|Yes| AddToResource[Add user to org/project\nAddMember service]
+    CheckEmail -->|No| RejectEmail["403 Wrong email address"]
+    CheckEmail -->|Yes| AddToResource["Add user to org/project<br>AddMember service"]
 
-    AddToResource --> UpdateStatus[UpdateStatus → accepted]
+    AddToResource --> UpdateStatus["UpdateStatus → accepted"]
     UpdateStatus --> End([🔴 User joined resource])
 
     DeclineInv --> End2([🔴 Invitation declined])
 
-    ExpireCheck -->|Yes| MarkExpired[ExpireOldInvitations\nstatus=expired]
+    ExpireCheck -->|Yes| MarkExpired["ExpireOldInvitations<br>status=expired"]
     MarkExpired --> End3([🔴 Invitation expired])
     ExpireCheck -->|No| InviteeAction
 
-    Start --> AdminRevoke{Admin\nrevokes?}
-    AdminRevoke -->|Yes| RevokeInv[DELETE /organizations/:id/invitations/:invId\nstatus=revoked]
+    Start --> AdminRevoke{Admin<br>revokes?}
+    AdminRevoke -->|Yes| RevokeInv["DELETE /organizations/:id/invitations/:invId<br>status=revoked"]
     RevokeInv --> End4([🔴 Invitation revoked])
 ```
 
@@ -139,23 +139,23 @@ flowchart TD
 
     GoOrgs --> HasOrgs{Has orgs?}
     HasOrgs -->|Yes| ViewOrgs[View org list]
-    HasOrgs -->|No| EmptyOrgs[Show EmptyState\n+ Create button]
+    HasOrgs -->|No| EmptyOrgs["Show EmptyState<br>+ Create button"]
 
     EmptyOrgs --> OpenOrgForm[Open OrgFormDialog]
     ViewOrgs --> OpenOrgForm
 
-    OpenOrgForm --> FillOrg[Fill Name + Description]
+    OpenOrgForm --> FillOrg["Fill Name + Description"]
     FillOrg --> ValidOrg{Valid?}
     ValidOrg -->|No| OrgErrors[Show errors]
     OrgErrors --> FillOrg
-    ValidOrg -->|Yes| PostOrg[POST /api/v1/organizations]
+    ValidOrg -->|Yes| PostOrg["POST /api/v1/organizations"]
 
-    PostOrg --> OrgCreated[Org created\nUser = Owner\nAdded to user.organizations]
+    PostOrg --> OrgCreated["Org created<br>User = Owner<br>Added to user.organizations"]
 
-    OrgCreated --> InviteMembers{Invite\nmembers?}
-    InviteMembers -->|Yes| SendInvite[POST /organizations/:id/invitations\n{ email, role }]
-    SendInvite --> EmailSent[Invitation email sent async]
-    EmailSent --> MoreInvites{More\ninvites?}
+    OrgCreated --> InviteMembers{Invite<br>members?}
+    InviteMembers -->|Yes| SendInvite["POST /organizations/:id/invitations<br>{ email, role }"]
+    SendInvite --> EmailSent["Invitation email sent async"]
+    EmailSent --> MoreInvites{More<br>invites?}
     MoreInvites -->|Yes| SendInvite
     MoreInvites -->|No| GoProjects
 
@@ -163,22 +163,22 @@ flowchart TD
 
     GoProjects --> HasProjects{Has projects?}
     HasProjects -->|Yes| ViewProjects[View project list]
-    HasProjects -->|No| EmptyProjects[Show EmptyState\n+ Create button]
+    HasProjects -->|No| EmptyProjects["Show EmptyState<br>+ Create button"]
 
     EmptyProjects --> OpenProjForm[Open ProjectFormDialog]
     ViewProjects --> OpenProjForm
 
-    OpenProjForm --> FillProj[Fill Name, Description\nStatus, Start/End Dates]
+    OpenProjForm --> FillProj["Fill Name, Description<br>Status, Start/End Dates"]
     FillProj --> ValidProj{Valid?}
     ValidProj -->|No| ProjErrors[Show errors]
     ProjErrors --> FillProj
-    ValidProj -->|Yes| CheckOrgAccess[Verify org membership\nCheckUserAccess]
+    ValidProj -->|Yes| CheckOrgAccess["Verify org membership<br>CheckUserAccess"]
 
-    CheckOrgAccess --> AccessOK{Access\ngranted?}
-    AccessOK -->|No| ForbiddenError[403 Access denied]
-    AccessOK -->|Yes| PostProj[POST /api/v1/projects]
+    CheckOrgAccess --> AccessOK{Access<br>granted?}
+    AccessOK -->|No| ForbiddenError["403 Access denied"]
+    AccessOK -->|Yes| PostProj["POST /api/v1/projects"]
 
-    PostProj --> ProjCreated[Project created\nUser = Owner + Member]
+    PostProj --> ProjCreated["Project created<br>User = Owner + Member"]
     ProjCreated --> GoTasks[Navigate to /tasks]
     GoTasks --> End([🔴 Ready to create Tasks])
 ```
@@ -189,35 +189,35 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    Start([🟢 HTTP Request arrives]) --> GetIP[Extract client IP\nc.ClientIP]
+    Start([🟢 HTTP Request arrives]) --> GetIP["Extract client IP<br>c.ClientIP"]
 
-    GetIP --> LockMutex[Acquire write lock\nsync.RWMutex]
+    GetIP --> LockMutex["Acquire write lock<br>sync.RWMutex"]
 
-    LockMutex --> VisitorExists{IP in\nvisitors map?}
+    LockMutex --> VisitorExists{IP in<br>visitors map?}
 
-    VisitorExists -->|No| CreateVisitor[Create visitor\ncount=1, lastSeen=now]
-    CreateVisitor --> UnlockAllow[Release lock]
-    UnlockAllow --> Allow[c.Next() → proceed]
+    VisitorExists -->|No| CreateVisitor["Create visitor<br>count=1, lastSeen=now"]
+    CreateVisitor --> UnlockAllow["Release lock"]
+    UnlockAllow --> Allow["c.Next() → proceed"]
 
-    VisitorExists -->|Yes| CheckWindow{Time since\nlastSeen > window?}
+    VisitorExists -->|Yes| CheckWindow{"Time since<br>lastSeen > window?"}
 
-    CheckWindow -->|Yes, window expired| ResetVisitor[Reset count=1\nlastSeen=now]
+    CheckWindow -->|Yes, window expired| ResetVisitor["Reset count=1<br>lastSeen=now"]
     ResetVisitor --> UnlockAllow
 
-    CheckWindow -->|No, within window| CheckLimit{count >=\nlimit (100)?}
+    CheckWindow -->|No, within window| CheckLimit{"count >=<br>limit (100)?"}
 
-    CheckLimit -->|Yes| UnlockDeny[Release lock]
-    UnlockDeny --> Deny[429 Rate limit exceeded\nc.Abort]
+    CheckLimit -->|Yes| UnlockDeny["Release lock"]
+    UnlockDeny --> Deny["429 Rate limit exceeded<br>c.Abort"]
 
-    CheckLimit -->|No| IncrCount[count++\nlastSeen=now]
+    CheckLimit -->|No| IncrCount["count++<br>lastSeen=now"]
     IncrCount --> UnlockAllow
 
     Allow --> End([🔴 Request processed])
     Deny --> End2([🔴 Request rejected])
 
-    subgraph Cleanup["Background Cleanup Goroutine (every 1 min)"]
+    subgraph Cleanup ["Background Cleanup Goroutine (every 1 min)"]
         CleanStart([⏰ Tick]) --> ScanVisitors[Scan all visitors]
-        ScanVisitors --> OldVisitor{lastSeen >\nwindow ago?}
+        ScanVisitors --> OldVisitor{"lastSeen ><br>window ago?"}
         OldVisitor -->|Yes| DeleteVisitor[Delete from map]
         OldVisitor -->|No| KeepVisitor[Keep]
         DeleteVisitor --> CleanEnd([Done])
