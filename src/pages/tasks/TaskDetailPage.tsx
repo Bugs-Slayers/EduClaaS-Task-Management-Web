@@ -345,7 +345,7 @@ export function TaskDetailPage() {
 
       {/* Assign Dialog */}
       <Dialog open={assignOpen} onOpenChange={(v) => { setAssignOpen(v); if (!v) setSelectedUserId('') }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md md:max-w-2xl">
           <DialogHeader>
             <DialogTitle style={{ fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}>
               Assign Member

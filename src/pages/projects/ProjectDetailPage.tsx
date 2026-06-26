@@ -143,7 +143,7 @@ export function ProjectDetailPage() {
               <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: 'var(--accent-cyber)', fontFamily: 'var(--font-display)' }}>
                 Project
               </p>
-              <h1 className="text-4xl font-black break-words" style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-display)', lineHeight: 1.1 }}>
+              <h1 className="text-4xl font-black break-words truncate" style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-display)', lineHeight: 1.1 }}>
                 {project.name}
               </h1>
               {project.description && (
@@ -457,9 +457,9 @@ export function ProjectDetailPage() {
 
       {/* Invite Dialog */}
       <Dialog open={inviteOpen} onOpenChange={(v) => { setInviteOpen(v); if (!v) reset() }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md md:max-w-2xl">
           <DialogHeader>
-            <DialogTitle style={{ fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}>
+            <DialogTitle className="truncate" style={{ fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}>
               Invite to Project
             </DialogTitle>
           </DialogHeader>

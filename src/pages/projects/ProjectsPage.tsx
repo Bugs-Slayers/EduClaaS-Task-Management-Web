@@ -107,7 +107,7 @@ export function ProjectsPage() {
                     <FolderKanban className="h-6 w-6" style={{ color: 'var(--accent-cyber)' }} />
                   </div>
                   <div className="min-w-0 flex-1 overflow-hidden">
-                    <h3 className="font-semibold truncate leading-tight" style={{ color: 'var(--text-primary)', maxWidth: '100%' }}>
+                    <h3 className="font-semibold text-lg" style={{ color: 'var(--text-primary)' }}>
                       {proj.name}
                     </h3>
                     <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>

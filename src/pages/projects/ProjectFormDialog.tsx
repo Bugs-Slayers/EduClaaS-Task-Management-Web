@@ -48,7 +48,7 @@ export function ProjectFormDialog({ open, onOpenChange, onSubmit, loading, defau
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md md:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{mode === 'create' ? 'Create Project' : 'Edit Project'}</DialogTitle>
         </DialogHeader>

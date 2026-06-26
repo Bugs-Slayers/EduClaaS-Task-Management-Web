@@ -34,10 +34,10 @@ export function ProfilePage() {
               <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>{user.email}</p>
             </div>
           </div>
-          <Button variant="outline" size="sm" className="shrink-0 ml-3">
+          {/* <Button variant="outline" size="sm" className="shrink-0 ml-3">
             <Edit2 className="mr-2 h-4 w-4" />
             Edit
-          </Button>
+          </Button> */}
         </div>
       </div>
 
@@ -119,14 +119,14 @@ export function ProfilePage() {
       )}
 
       {/* Danger Zone */}
-      <div className="rounded-xl border-2" style={{ borderColor: 'var(--accent-neon)', background: 'var(--bg-secondary)' }}>
+      {/* <div className="rounded-xl border-2" style={{ borderColor: 'var(--accent-neon)', background: 'var(--bg-secondary)' }}>
         <div className="p-6 pb-0">
           <h3 className="text-sm font-black uppercase tracking-tight" style={{ fontFamily: 'var(--font-display)', color: 'var(--accent-neon)' }}>Danger Zone</h3>
         </div>
         <div className="p-6">
           <Button variant="destructive" size="sm">Delete Account</Button>
         </div>
-      </div>
+      </div> */}
     </div>
   )
 }

@@ -18,7 +18,7 @@ type FormData = z.infer<typeof schema>
 
 export function RegisterPage() {
   const [showPw, setShowPw] = useState(false)
-  const { mutate: register_, isPending } = useRegister()
+  const { mutate: register_, isPending, error: serverError } = useRegister()
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -159,6 +159,20 @@ export function RegisterPage() {
             </p>
           )}
         </div>
+
+        {serverError && (
+          <div
+            className="border-2 px-4 py-3 text-sm font-bold"
+            style={{
+              fontFamily: 'var(--font-mono)',
+              color: 'var(--accent-neon)',
+              borderColor: 'var(--accent-neon)',
+              background: 'rgba(239,68,68,0.1)',
+            }}
+          >
+            {(serverError as any)?.response?.data?.error ?? 'Registration failed. Please try again.'}
+          </div>
+        )}
 
         <button
           type="submit"

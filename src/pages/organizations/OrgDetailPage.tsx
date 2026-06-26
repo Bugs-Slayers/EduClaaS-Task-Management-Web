@@ -149,7 +149,7 @@ export function OrgDetailPage() {
               <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: 'var(--accent-electric)', fontFamily: 'var(--font-display)' }}>
                 Organization
               </p>
-              <h1 className="text-4xl font-black break-words" style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-display)', lineHeight: 1.1 }}>
+              <h1 className="text-4xl font-black break-words truncate" style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-display)', lineHeight: 1.1 }}>
                 {org.name}
               </h1>
               {org.description && (
@@ -327,7 +327,7 @@ export function OrgDetailPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => setRemoveConfirm(member.user_id)}
-                          className="h-8 text-xs opacity-0 group-hover:opacity-100"
+                          className="h-8 text-xs group-hover:opacity-100 border-red-400"
                           style={{ color: 'var(--accent-neon)' }}
                         >
                           Leave
@@ -460,8 +460,8 @@ export function OrgDetailPage() {
                     >
                       <FolderKanban className="h-4 w-4" style={{ color: 'var(--accent-cyber)' }} />
                     </div>
-                    <div>
-                      <p className="text-sm font-bold" style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}>
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold truncate" style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}>
                         {project.name}
                       </p>
                       <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>
@@ -481,7 +481,7 @@ export function OrgDetailPage() {
 
       {/* Invite Dialog */}
       <Dialog open={inviteOpen} onOpenChange={(v) => { setInviteOpen(v); if (!v) reset() }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md md:max-w-2xl">
           <DialogHeader>
             <DialogTitle style={{ fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}>
               Invite Member
