@@ -139,6 +139,21 @@ export interface UpdateTaskRequest {
   tags?: string[];
 }
 
+export type TaskRealtimeEventType =
+  | "task_created"
+  | "task_updated"
+  | "task_deleted"
+  | "task_assigned"
+  | "task_unassigned";
+
+export interface TaskRealtimeEvent {
+  type: TaskRealtimeEventType;
+  payload: Task;
+  project_id: string;
+  actor_id: string;
+  timestamp: string;
+}
+
 // ─── Invitation ───────────────────────────────────────────────────────────────
 export type InvitationStatus =
   | "pending"

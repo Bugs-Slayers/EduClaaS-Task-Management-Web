@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Plus, CheckSquare, MoreVertical, Pencil, Trash2, GripVertical, Eye, LayoutDashboard, Columns3 } from 'lucide-react'
+import { Plus, MoreVertical, Pencil, Trash2, GripVertical, Eye, LayoutDashboard, Columns3 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -9,8 +9,9 @@ import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { GanttChart } from '@/components/shared/GanttChart'
 import { useTasks, useCreateTask, useUpdateTask, useDeleteTask } from '@/hooks/useTasks'
+import { useTaskRealtime } from '@/hooks/useTaskRealtime'
 import { TaskFormDialog } from './TaskFormDialog'
-import type { Task, TaskStatus } from '@/types'
+import type { CreateTaskRequest, Task, TaskStatus, UpdateTaskRequest } from '@/types'
 import { formatDistanceToNow } from 'date-fns'
 
 const TASK_STATUSES: { id: TaskStatus; label: string }[] = [
@@ -26,6 +27,7 @@ export function TasksPage() {
   const [params] = useSearchParams()
   const projectId = params.get('project_id') ?? params.get('project') ?? undefined
   const { data: tasks, isLoading } = useTasks(projectId)
+  useTaskRealtime({ projectId, tasks })
   const { mutate: create, isPending: creating } = useCreateTask()
   const { mutate: deleteTask, isPending: deleting } = useDeleteTask()
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
@@ -43,11 +45,11 @@ export function TasksPage() {
     return acc
   }, {} as Record<TaskStatus, Task[]>)
 
-  const handleCreate = (data: any) => {
+  const handleCreate = (data: CreateTaskRequest) => {
     create(data, { onSuccess: () => setCreateOpen(false) })
   }
 
-  const handleEdit = (data: any) => {
+  const handleEdit = (data: UpdateTaskRequest) => {
     if (!selected) return
     setSelectedTaskId(selected.id)
     update(data, { onSuccess: () => setEditOpen(false) })
