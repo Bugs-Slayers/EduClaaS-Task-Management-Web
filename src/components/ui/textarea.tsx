@@ -7,9 +7,23 @@ function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
     <textarea
       data-slot="textarea"
       className={cn(
-        "flex field-sizing-content min-h-16 w-full rounded-md border border-input bg-transparent px-2.5 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:bg-input/30 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40",
+        "flex field-sizing-content min-h-16 w-full rounded-none border-2 px-3 py-2 text-sm font-bold tracking-wide transition-all outline-none placeholder:uppercase placeholder:tracking-wide disabled:cursor-not-allowed disabled:opacity-50 md:text-sm aria-invalid:border-[var(--accent-neon)]",
         className
       )}
+      style={{
+        background: 'var(--bg-primary)',
+        borderColor: 'var(--border-strong)',
+        color: 'var(--text-primary)',
+        fontFamily: 'var(--font-mono)',
+      }}
+      onFocus={(e) => {
+        e.currentTarget.style.borderColor = 'var(--accent-electric)'
+      }}
+      onBlur={(e) => {
+        if (!e.currentTarget.hasAttribute('aria-invalid')) {
+          e.currentTarget.style.borderColor = 'var(--border-strong)'
+        }
+      }}
       {...props}
     />
   )

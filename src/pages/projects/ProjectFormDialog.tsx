@@ -48,11 +48,11 @@ export function ProjectFormDialog({ open, onOpenChange, onSubmit, loading, defau
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md md:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{mode === 'create' ? 'Create Project' : 'Edit Project'}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="w-full space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="proj-name">Name *</Label>
             <Input id="proj-name" placeholder="Website Redesign" {...register('name')} aria-invalid={!!errors.name} />

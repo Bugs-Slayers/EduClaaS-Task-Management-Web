@@ -1,17 +1,17 @@
 import { useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { Plus, CheckSquare, MoreVertical, Pencil, Trash2, GripVertical } from 'lucide-react'
-import { Card, CardContent } from '@/components/ui/card'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Plus, MoreVertical, Pencil, Trash2, GripVertical, Eye, LayoutDashboard, Columns3 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { PageHeader } from '@/components/shared/PageHeader'
-import { EmptyState } from '@/components/shared/EmptyState'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { StatusBadge } from '@/components/shared/StatusBadge'
+import { GanttChart } from '@/components/shared/GanttChart'
 import { useTasks, useCreateTask, useUpdateTask, useDeleteTask } from '@/hooks/useTasks'
+import { useTaskRealtime } from '@/hooks/useTaskRealtime'
 import { TaskFormDialog } from './TaskFormDialog'
-import type { Task, TaskStatus } from '@/types'
+import type { CreateTaskRequest, Task, TaskStatus, UpdateTaskRequest } from '@/types'
 import { formatDistanceToNow } from 'date-fns'
 
 const TASK_STATUSES: { id: TaskStatus; label: string }[] = [
@@ -23,9 +23,11 @@ const TASK_STATUSES: { id: TaskStatus; label: string }[] = [
 ]
 
 export function TasksPage() {
+  const navigate = useNavigate()
   const [params] = useSearchParams()
   const projectId = params.get('project_id') ?? params.get('project') ?? undefined
   const { data: tasks, isLoading } = useTasks(projectId)
+  useTaskRealtime({ projectId, tasks })
   const { mutate: create, isPending: creating } = useCreateTask()
   const { mutate: deleteTask, isPending: deleting } = useDeleteTask()
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
@@ -36,17 +38,18 @@ export function TasksPage() {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [selected, setSelected] = useState<Task | null>(null)
   const [draggedTask, setDraggedTask] = useState<Task | null>(null)
+  const [viewMode, setViewMode] = useState<'kanban' | 'gantt'>('kanban')
 
   const tasksByStatus = TASK_STATUSES.reduce((acc, status) => {
     acc[status.id] = tasks?.filter((t) => t.status === status.id) ?? []
     return acc
   }, {} as Record<TaskStatus, Task[]>)
 
-  const handleCreate = (data: any) => {
+  const handleCreate = (data: CreateTaskRequest) => {
     create(data, { onSuccess: () => setCreateOpen(false) })
   }
 
-  const handleEdit = (data: any) => {
+  const handleEdit = (data: UpdateTaskRequest) => {
     if (!selected) return
     setSelectedTaskId(selected.id)
     update(data, { onSuccess: () => setEditOpen(false) })
@@ -79,13 +82,41 @@ export function TasksPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Kanban Board"
-        description="Drag and drop tasks to organize your work"
+        title={viewMode === 'kanban' ? 'Kanban Board' : 'Gantt Chart'}
+        description={viewMode === 'kanban' ? 'Drag and drop tasks to organize your work' : 'View tasks along a timeline'}
         action={
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            New Task
-          </Button>
+          <div className="flex items-center gap-2">
+            <div className="flex rounded-none border-2 overflow-hidden" style={{ borderColor: 'var(--border-strong)' }}>
+              <button
+                onClick={() => setViewMode('kanban')}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-black uppercase tracking-wider transition-all"
+                style={{
+                  background: viewMode === 'kanban' ? 'var(--accent-electric)' : 'var(--bg-tertiary)',
+                  color: viewMode === 'kanban' ? 'var(--text-inverse)' : 'var(--text-secondary)',
+                  fontFamily: 'var(--font-display)',
+                }}
+              >
+                <Columns3 className="h-3.5 w-3.5" />
+                Kanban
+              </button>
+              <button
+                onClick={() => setViewMode('gantt')}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-black uppercase tracking-wider transition-all"
+                style={{
+                  background: viewMode === 'gantt' ? 'var(--accent-electric)' : 'var(--bg-tertiary)',
+                  color: viewMode === 'gantt' ? 'var(--text-inverse)' : 'var(--text-secondary)',
+                  fontFamily: 'var(--font-display)',
+                }}
+              >
+                <LayoutDashboard className="h-3.5 w-3.5" />
+                Gantt
+              </button>
+            </div>
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              New Task
+            </Button>
+          </div>
         }
       />
 
@@ -100,7 +131,8 @@ export function TasksPage() {
             </div>
           ))}
         </div>
-      ) : (
+      ) : null}
+      {tasks && viewMode === 'kanban' && (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-5 overflow-x-auto pb-4">
           {TASK_STATUSES.map((status) => (
             <div
@@ -176,14 +208,18 @@ export function TasksPage() {
                                 <MoreVertical className="h-3 w-3" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-40">
+                            <DropdownMenuContent align="end" className="w-42">
+                              <DropdownMenuItem onClick={() => navigate(`/tasks/${task.id}`)}>
+                                <Eye className="mr-2 h-3 w-3" />
+                                View
+                              </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => { setSelected(task); setEditOpen(true) }}>
                                 <Pencil className="mr-2 h-3 w-3" />
                                 Edit
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => { setSelected(task); setDeleteOpen(true) }}
-                                className="text-destructive focus:text-destructive"
+                                variant="destructive"
                               >
                                 <Trash2 className="mr-2 h-3 w-3" />
                                 Delete
@@ -221,6 +257,10 @@ export function TasksPage() {
             </div>
           ))}
         </div>
+      )}
+
+      {tasks && viewMode === 'gantt' && (
+        <GanttChart tasks={tasks} />
       )}
 
       <TaskFormDialog

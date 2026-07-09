@@ -4,6 +4,9 @@ import type {
   Project,
   CreateProjectRequest,
   UpdateProjectRequest,
+  SendProjectInvitationRequest,
+  Invitation,
+  ProjectMember,
 } from "@/types";
 
 export const projectsApi = {
@@ -22,6 +25,26 @@ export const projectsApi = {
 
   delete: (id: string) => api.delete<ApiResponse<null>>(`/projects/${id}`),
 
+  // ── Invitations ──────────────────────────────────────────────────────────
+  sendInvitation: (id: string, data: SendProjectInvitationRequest) =>
+    api.post<ApiResponse<Invitation>>(`/projects/${id}/invitations`, data),
+
+  listInvitations: (id: string) =>
+    api.get<ApiResponse<Invitation[]>>(`/projects/${id}/invitations`),
+
+  revokeInvitation: (id: string, invitationId: string) =>
+    api.delete<ApiResponse<null>>(
+      `/projects/${id}/invitations/${invitationId}`,
+    ),
+
+  // ── Members ──────────────────────────────────────────────────────────────
+  listMembers: (id: string) =>
+    api.get<ApiResponse<ProjectMember[]>>(`/projects/${id}/members`),
+
+  removeMember: (id: string, userId: string) =>
+    api.delete<ApiResponse<null>>(`/projects/${id}/members/${userId}`),
+
+  /** @deprecated use sendInvitation instead */
   addMember: (id: string, userId: string) =>
     api.post<ApiResponse<null>>(`/projects/${id}/members`, { user_id: userId }),
 };

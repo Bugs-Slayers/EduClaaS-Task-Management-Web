@@ -1,11 +1,15 @@
-import { Outlet, Navigate } from 'react-router-dom'
+import { Outlet, Navigate, useSearchParams } from 'react-router-dom'
 import { Zap, Code2, Sparkles, Layers } from 'lucide-react'
 import { useAuthStore } from '@/store/auth.store'
 
 export function AuthLayout() {
   const { isAuthenticated } = useAuthStore()
+  const [searchParams] = useSearchParams()
 
-  if (isAuthenticated) return <Navigate to="/dashboard" replace />
+  if (isAuthenticated) {
+    const redirect = searchParams.get('redirect')
+    return <Navigate to={redirect ?? '/dashboard'} replace />
+  }
 
   return (
     <div

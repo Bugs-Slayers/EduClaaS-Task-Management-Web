@@ -1,13 +1,8 @@
 import { useNavigate } from 'react-router-dom'
-import { Building2, FolderKanban, CheckSquare, Clock, ArrowRight, Plus } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Building2, FolderKanban, CheckSquare, Clock, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
 import { StatusBadge } from '@/components/shared/StatusBadge'
-import { useAuthStore } from '@/store/auth.store'
-import { useOrganizations } from '@/hooks/useOrganizations'
-import { useProjects } from '@/hooks/useProjects'
-import { useTasks } from '@/hooks/useTasks'
+import { useDashboardStats } from '@/hooks/useDashboard'
 import { formatDistanceToNow } from 'date-fns'
 
 function StatCard({ icon: Icon, label, value }: {
@@ -42,60 +37,36 @@ function StatCard({ icon: Icon, label, value }: {
 }
 
 export function DashboardPage() {
-  const { user } = useAuthStore()
   const navigate = useNavigate()
-  const { data: orgs, isLoading: orgsLoading } = useOrganizations()
-  const { data: projects, isLoading: projectsLoading } = useProjects()
-  const { data: tasks, isLoading: tasksLoading } = useTasks()
-
-  const doneTasks = tasks?.filter((t) => t.status === 'done').length ?? 0
-  const pendingTasks = tasks?.filter((t) => t.status !== 'done').length ?? 0
-  const recentTasks = tasks?.slice(0, 5) ?? []
-  const recentProjects = projects?.slice(0, 6) ?? []
+  const { data: stats, isLoading } = useDashboardStats()
 
   return (
     <div className="space-y-8">
       {/* Header */}
       <div className="pb-8" style={{ borderBottom: '2px solid var(--border-medium)' }}>
         <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: 'var(--accent-electric)' }}>
-          Welcome Back
+          Dashboard
         </p>
         <h1 className="text-5xl font-black" style={{ color: 'var(--text-primary)' }}>
-          Dashboard
+          Overview
         </h1>
         <p className="mt-3 text-lg" style={{ color: 'var(--text-secondary)' }}>
-          Overview of your organizations, projects, and tasks
+          Summary of your organizations, projects, and tasks
         </p>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {orgsLoading ? (
+        {isLoading ? (
           Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="h-32 rounded-xl" style={{ background: 'var(--bg-secondary)' }} />
           ))
         ) : (
           <>
-            <StatCard
-              icon={Building2}
-              label="Organizations"
-              value={orgs?.length ?? 0}
-            />
-            <StatCard
-              icon={FolderKanban}
-              label="Projects"
-              value={projects?.length ?? 0}
-            />
-            <StatCard
-              icon={CheckSquare}
-              label="Completed Tasks"
-              value={doneTasks}
-            />
-            <StatCard
-              icon={Clock}
-              label="In Progress"
-              value={pendingTasks}
-            />
+            <StatCard icon={Building2} label="Organizations" value={stats?.organizations_count ?? 0} />
+            <StatCard icon={FolderKanban} label="Projects" value={stats?.projects_count ?? 0} />
+            <StatCard icon={CheckSquare} label="Completed Tasks" value={stats?.tasks_completed ?? 0} />
+            <StatCard icon={Clock} label="In Progress" value={stats?.tasks_in_progress ?? 0} />
           </>
         )}
       </div>
@@ -121,17 +92,17 @@ export function DashboardPage() {
               <ArrowRight className="ml-2 h-3 w-3" />
             </Button>
           </div>
-          {tasksLoading ? (
+          {isLoading ? (
             <div className="space-y-3">
               {Array.from({ length: 3 }).map((_, i) => (
                 <div key={i} className="h-12 rounded" style={{ background: 'var(--bg-tertiary)' }} />
               ))}
             </div>
-          ) : recentTasks.length === 0 ? (
+          ) : !stats?.recent_tasks?.length ? (
             <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>No tasks yet</p>
           ) : (
             <div className="space-y-2">
-              {recentTasks.map((task) => (
+              {stats.recent_tasks.map((task) => (
                 <button
                   key={task.id}
                   onClick={() => navigate('/tasks')}
@@ -174,17 +145,17 @@ export function DashboardPage() {
               <ArrowRight className="ml-2 h-3 w-3" />
             </Button>
           </div>
-          {projectsLoading ? (
+          {isLoading ? (
             <div className="space-y-3">
               {Array.from({ length: 3 }).map((_, i) => (
                 <div key={i} className="h-12 rounded" style={{ background: 'var(--bg-tertiary)' }} />
               ))}
             </div>
-          ) : recentProjects.length === 0 ? (
+          ) : !stats?.recent_projects?.length ? (
             <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>No projects yet</p>
           ) : (
             <div className="space-y-2">
-              {recentProjects.map((project) => (
+              {stats.recent_projects.map((project) => (
                 <button
                   key={project.id}
                   onClick={() => navigate('/projects')}
@@ -194,7 +165,7 @@ export function DashboardPage() {
                   <div className="min-w-0 flex-1">
                     <p className="font-medium truncate" style={{ color: 'var(--text-primary)' }}>{project.name}</p>
                     <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
-                      {project.members.length} {project.members.length === 1 ? 'member' : 'members'}
+                      {project.members?.length ?? 0} {(project.members?.length ?? 0) === 1 ? 'member' : 'members'}
                     </p>
                   </div>
                 </button>

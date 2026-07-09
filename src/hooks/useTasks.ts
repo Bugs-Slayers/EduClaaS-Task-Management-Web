@@ -69,3 +69,33 @@ export function useDeleteTask() {
       toast.error(err.response?.data?.error ?? "Failed to delete"),
   });
 }
+
+// ── Assign / Unassign ────────────────────────────────────────────────────────
+
+export function useAssignTask(taskId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (userIds: string[]) => tasksApi.assignUsers(taskId, userIds),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: TASK_KEYS.detail(taskId) });
+      qc.invalidateQueries({ queryKey: TASK_KEYS.all });
+      toast.success("User(s) assigned!");
+    },
+    onError: (err: any) =>
+      toast.error(err.response?.data?.error ?? "Failed to assign"),
+  });
+}
+
+export function useUnassignTask(taskId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) => tasksApi.unassignUser(taskId, userId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: TASK_KEYS.detail(taskId) });
+      qc.invalidateQueries({ queryKey: TASK_KEYS.all });
+      toast.success("User unassigned");
+    },
+    onError: (err: any) =>
+      toast.error(err.response?.data?.error ?? "Failed to unassign"),
+  });
+}

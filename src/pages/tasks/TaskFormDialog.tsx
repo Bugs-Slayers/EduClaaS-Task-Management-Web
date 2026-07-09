@@ -1,15 +1,15 @@
-import { useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { useEffect, useRef } from 'react'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Loader2 } from 'lucide-react'
+import { Loader2, X } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { useProjects } from '@/hooks/useProjects'
+import { useProjects, useProjectMembers } from '@/hooks/useProjects'
 import type { Task, TaskStatus, TaskPriority } from '@/types'
 
 const schema = z.object({
@@ -18,6 +18,8 @@ const schema = z.object({
   project_id: z.string().min(1, 'Project required'),
   status: z.enum(['todo', 'in_progress', 'in_review', 'done', 'blocked'] as const).optional(),
   priority: z.enum(['low', 'medium', 'high', 'critical'] as const).optional(),
+  assigned_to: z.array(z.string()).optional(),
+  tags: z.array(z.string()).optional(),
 })
 type FormData = z.infer<typeof schema>
 
@@ -32,9 +34,18 @@ interface Props {
 
 export function TaskFormDialog({ open, onOpenChange, onSubmit, loading, defaultValues, mode = 'create' }: Props) {
   const { data: projects } = useProjects()
-  const { register, handleSubmit, setValue, reset, formState: { errors } } = useForm<FormData>({
+  const tagInputRef = useRef<HTMLInputElement>(null)
+
+  const { register, handleSubmit, setValue, reset, control, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
   })
+
+  const watchedProjectId = useWatch({ control, name: 'project_id' })
+  const watchedAssignedTo = useWatch({ control, name: 'assigned_to' }) ?? []
+  const watchedTags = useWatch({ control, name: 'tags' }) ?? []
+
+  const projectIdForMembers = mode === 'create' ? watchedProjectId : (defaultValues?.project_id ?? '')
+  const { data: projectMembers } = useProjectMembers(projectIdForMembers)
 
   useEffect(() => {
     if (open) {
@@ -44,17 +55,61 @@ export function TaskFormDialog({ open, onOpenChange, onSubmit, loading, defaultV
         project_id: defaultValues?.project_id ?? '',
         status: defaultValues?.status ?? 'todo',
         priority: defaultValues?.priority ?? 'medium',
+        assigned_to: defaultValues?.assigned_to ?? [],
+        tags: defaultValues?.tags ?? [],
       })
+      if (tagInputRef.current) {
+        tagInputRef.current.value = ''
+      }
     }
   }, [open, defaultValues, reset])
 
+  const addTag = (raw: string) => {
+    const trimmed = raw.trim()
+    if (trimmed && !watchedTags.includes(trimmed)) {
+      setValue('tags', [...watchedTags, trimmed])
+    }
+    if (tagInputRef.current) {
+      tagInputRef.current.value = ''
+    }
+  }
+
+  const removeTag = (tag: string) => {
+    setValue('tags', watchedTags.filter((t: string) => t !== tag))
+  }
+
+  const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault()
+      addTag(e.currentTarget.value)
+    }
+  }
+
+  const addMember = (userId: string) => {
+    if (userId && !watchedAssignedTo.includes(userId)) {
+      setValue('assigned_to', [...watchedAssignedTo, userId])
+    }
+  }
+
+  const removeMember = (userId: string) => {
+    setValue('assigned_to', watchedAssignedTo.filter((id: string) => id !== userId))
+  }
+
+  const availableMembers = (projectMembers ?? []).filter(
+    (m) => !watchedAssignedTo.includes(m.user_id),
+  )
+
+  const assignedMembers = (projectMembers ?? []).filter(
+    (m) => watchedAssignedTo.includes(m.user_id),
+  )
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md md:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{mode === 'create' ? 'Create Task' : 'Edit Task'}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="w-full space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="task-title">Title *</Label>
             <Input id="task-title" placeholder="Design homepage" {...register('title')} aria-invalid={!!errors.title} />
@@ -105,6 +160,104 @@ export function TaskFormDialog({ open, onOpenChange, onSubmit, loading, defaultV
               </Select>
             </div>
           </div>
+
+          {/* ── Assigned To ── */}
+          <div className="space-y-1.5">
+            <Label>Assigned To</Label>
+            {projectIdForMembers ? (
+              <div className="space-y-2">
+                {assignedMembers.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {assignedMembers.map((m) => (
+                      <span
+                        key={m.user_id}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold border rounded-sm"
+                        style={{
+                          background: 'var(--bg-tertiary)',
+                          color: 'var(--text-primary)',
+                          borderColor: 'var(--border-medium)',
+                          fontFamily: 'var(--font-display)',
+                        }}
+                      >
+                        {m.name}
+                        <button
+                          type="button"
+                          onClick={() => removeMember(m.user_id)}
+                          className="hover:opacity-70"
+                          style={{ color: 'var(--text-tertiary)' }}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {availableMembers.length > 0 ? (
+                  <Select value="" onValueChange={addMember}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={`Add member${assignedMembers.length > 0 ? '...' : ''}`} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableMembers.map((m) => (
+                        <SelectItem key={m.user_id} value={m.user_id}>
+                          {m.name} — {m.email}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : watchedAssignedTo.length > 0 ? (
+                  <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>All members assigned</p>
+                ) : null}
+              </div>
+            ) : (
+              <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                {mode === 'create' ? 'Select a project first' : 'Loading members...'}
+              </p>
+            )}
+          </div>
+
+          {/* ── Tags ── */}
+          <div className="space-y-1.5">
+            <Label htmlFor="task-tags">Tags</Label>
+            <div className="space-y-2">
+              {watchedTags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {watchedTags.map((tag: string) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold uppercase tracking-wider border rounded-sm"
+                      style={{
+                        background: 'var(--bg-tertiary)',
+                        color: 'var(--accent-cyber)',
+                        borderColor: 'var(--accent-cyber)',
+                        fontFamily: 'var(--font-display)',
+                      }}
+                    >
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => removeTag(tag)}
+                        className="hover:opacity-70"
+                        style={{ color: 'var(--accent-cyber)' }}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <Input
+                id="task-tags"
+                ref={tagInputRef}
+                placeholder="Type tag and press Enter or comma"
+                onKeyDown={handleTagKeyDown}
+                onBlur={() => {
+                  if (tagInputRef.current) addTag(tagInputRef.current.value)
+                }}
+              />
+            </div>
+          </div>
+
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>Cancel</Button>
             <Button type="submit" disabled={loading}>

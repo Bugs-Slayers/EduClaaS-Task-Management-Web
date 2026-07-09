@@ -30,6 +30,26 @@
   --gradient-neon: linear-gradient(135deg, #ff0066 0%, #ff6b00 100%);
   --gradient-dark: linear-gradient(180deg, #0a0a0a 0%, #1a1a1a 100%);
   
+  /* Shadcn-compatible variable mapping */
+  --card: var(--bg-secondary);
+  --card-foreground: var(--text-primary);
+  --popover: var(--bg-elevated);
+  --popover-foreground: var(--text-primary);
+  --primary: var(--accent-electric);
+  --primary-foreground: var(--text-inverse);
+  --secondary: var(--bg-tertiary);
+  --secondary-foreground: var(--text-primary);
+  --muted: var(--bg-tertiary);
+  --muted-foreground: var(--text-secondary);
+  --accent: var(--accent-electric);
+  --accent-foreground: var(--text-inverse);
+  --destructive: var(--accent-neon);
+  --destructive-foreground: #ffffff;
+  --border: var(--border-medium);
+  --input: var(--border-strong);
+  --ring: var(--accent-electric);
+  --radius: 0.75rem;
+
   /* Typography */
   --font-display: 'Archivo Black', sans-serif;
   --font-serif: 'Instrument Serif', serif;

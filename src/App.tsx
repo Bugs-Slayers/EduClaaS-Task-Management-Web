@@ -12,6 +12,7 @@ import { ProjectDetailPage } from './pages/projects/ProjectDetailPage';
 import { TasksPage } from './pages/tasks/TasksPage';
 import { TaskDetailPage } from './pages/tasks/TaskDetailPage';
 import { ProfilePage } from './pages/profile/ProfilePage';
+import { InvitationAcceptPage } from './pages/invitations/InvitationAcceptPage';
 
 function App() {
   const { isAuthenticated } = useAuthStore();
@@ -44,6 +45,9 @@ function App() {
           <Route path="/tasks/:id" element={<TaskDetailPage />} />
           <Route path="/profile" element={<ProfilePage />} />
         </Route>
+
+        {/* Invitation Accept — public, handles auth state itself */}
+        <Route path="/invitations/accept" element={<InvitationAcceptPage />} />
 
         {/* Default Route */}
         <Route

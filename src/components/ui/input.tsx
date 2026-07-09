@@ -8,9 +8,24 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
       type={type}
       data-slot="input"
       className={cn(
-        "h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-2.5 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:bg-input/30 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40",
+        "h-10 w-full min-w-0 rounded-none border-2 px-3 py-1 text-sm font-bold tracking-wide transition-all outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 placeholder:uppercase placeholder:tracking-wide md:text-sm aria-invalid:border-[var(--accent-neon)]",
         className
       )}
+      style={{
+        background: 'var(--bg-primary)',
+        borderColor: 'var(--border-strong)',
+        color: 'var(--text-primary)',
+        fontFamily: 'var(--font-display)',
+      }}
+      onFocus={(e) => {
+        e.currentTarget.style.borderColor = 'var(--accent-electric)'
+        e.currentTarget.style.outline = 'none'
+      }}
+      onBlur={(e) => {
+        if (!e.currentTarget.hasAttribute('aria-invalid')) {
+          e.currentTarget.style.borderColor = 'var(--border-strong)'
+        }
+      }}
       {...props}
     />
   )

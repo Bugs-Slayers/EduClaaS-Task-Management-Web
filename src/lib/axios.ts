@@ -12,14 +12,20 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Global 401 → clear session and redirect
+const AUTH_ROUTES = ["/auth/login", "/auth/register"];
+
 api.interceptors.response.use(
   (res) => res,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      window.location.href = "/login";
+      const url: string = error.config?.url ?? "";
+      const isAuthRoute = AUTH_ROUTES.some((r) => url.includes(r));
+
+      if (!isAuthRoute) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        window.location.href = "/login";
+      }
     }
     return Promise.reject(error);
   },

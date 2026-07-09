@@ -57,7 +57,7 @@ export function OrganizationsPage() {
               Manage your organizations and collaborate with teams
             </p>
           </div>
-          <Button 
+          <Button
             onClick={() => setCreateOpen(true)}
             className="px-6 h-11"
             style={{ background: 'var(--accent-electric)', color: 'var(--text-inverse)' }}
@@ -79,7 +79,7 @@ export function OrganizationsPage() {
           <Building2 className="h-12 w-12 mb-4" style={{ color: 'var(--text-tertiary)' }} />
           <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>No organizations yet</h3>
           <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>Create your first organization to start collaborating with your team.</p>
-          <Button 
+          <Button
             onClick={() => setCreateOpen(true)}
             style={{ background: 'var(--accent-electric)', color: 'var(--text-inverse)' }}
           >
@@ -89,8 +89,8 @@ export function OrganizationsPage() {
       ) : (
         <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {orgs.map((org) => (
-            <div 
-              key={org.id} 
+            <div
+              key={org.id}
               className="group p-6 rounded-xl border transition-all hover:border-current cursor-pointer"
               style={{
                 background: 'var(--bg-secondary)',
@@ -99,14 +99,14 @@ export function OrganizationsPage() {
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3 flex-1">
-                  <div 
+                  <div
                     className="flex h-12 w-12 items-center justify-center rounded-lg flex-shrink-0"
                     style={{ background: 'var(--bg-tertiary)' }}
                   >
                     <Building2 className="h-6 w-6" style={{ color: 'var(--accent-electric)' }} />
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+                  <div className="min-w-0 flex-1 overflow-hidden">
+                    <h3 className="font-semibold truncate leading-tight" style={{ color: 'var(--text-primary)', maxWidth: '100%' }}>
                       {org.name}
                     </h3>
                     <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
@@ -116,9 +116,9 @@ export function OrganizationsPage() {
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button 
-                      variant="ghost" 
-                      size="icon-sm" 
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
                       className="opacity-0 group-hover:opacity-100 h-8 w-8"
                     >
                       <MoreVertical className="h-4 w-4" />
@@ -147,11 +147,11 @@ export function OrganizationsPage() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-              
+
               <p className="mb-4 line-clamp-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
                 {org.description || 'No description provided'}
               </p>
-              
+
               <div className="flex items-center justify-between pt-4" style={{ borderTop: '1px solid var(--border-medium)' }}>
                 <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
                   Created {formatDistanceToNow(new Date(org.created_at), { addSuffix: true })}
